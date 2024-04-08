@@ -1,5 +1,9 @@
 # search gitignore generator and then node. it gives u all the files that should not be deploy to production and on github like .env , node_modules , etc.
 # Logs
+
+Explanation.txt
+revision.js
+
 logs
 *.log
 npm-debug.log*
