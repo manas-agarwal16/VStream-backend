@@ -6,6 +6,6 @@ class ApiError extends Error {
       (this.message = message),
       (this.statusCode = statusCode),
       (this.errors = errors),
-      this.success = false // error dont proceed
+      this.success = false // error, dont proceed
   }
 }

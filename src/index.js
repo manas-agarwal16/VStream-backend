@@ -11,5 +11,5 @@ DB()
     });
   })
   .catch((err) => {
-    console.log("Express cann't connect with database: ", err);
+    console.log("Express cann't connect with database: ", err); 
   });
