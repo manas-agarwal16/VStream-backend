@@ -15,3 +15,5 @@ app.use(
 app.use(express.json({limit : "10kb"}));//for incoming requests in jdon format
 app.use(express.urlencoded({extended: true})) // for incoming requests in url
 app.use(express.static("Public"));//serves static files like html, css, js in public directory
+
+export {app} ;
