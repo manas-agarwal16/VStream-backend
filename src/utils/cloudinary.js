@@ -13,7 +13,6 @@ const uploadOncloudinary = async (localFilePath) => {
       resource_type: "auto", //auto detects itself , either video , image, file ...
       public_id: "fileName",
     });
-    //file uploaded succesfully.
     console.log(`file is uplaoded successfully on cloudinary: ${upload.url}`); //Cloudinary generates a URL where the uploaded file can be accessed and we save this url into our database.
     return upload; // contain fields like format, width, height, url,etc.
   } catch (error) {
@@ -23,4 +22,4 @@ const uploadOncloudinary = async (localFilePath) => {
   }
 };
 
-export {uploadOncloudinary};
+export { uploadOncloudinary };
