@@ -7,7 +7,7 @@ const storage = multer.diskStorage({
     cb(null, "../public/temp"); //saving files in ../public/temp folder.
   },
   filename: function (req, file, cb) {
-    cb(null, file.originalname); 
+    cb(null, file.originalname); //although we can update our code to save the files with unique name to avoid overwriting of the files. we can do it by adding addition string in the file name provided by the user randomly.
   },
 });
 

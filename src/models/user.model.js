@@ -41,7 +41,6 @@ const userSchema = new mongoose.Schema(
     },
     coverimage: {
       type: String,
-      require: true,
     },
     refreshToken: {
       type: String,
@@ -58,7 +57,7 @@ userSchema.pre("save", async function (next) {
   // pre hook
   if (this.isModified("password")) {
     //isModified checks if the data is modified and "password" / anything has to be passed as string.
-    this.password = bcrypt.hash(this.password, 10); //10 : no. of salt rounds
+    this.password = await bcrypt.hash(this.password, 10); //10 : no. of salt rounds
   }
   next(); //call next middleware.
 });

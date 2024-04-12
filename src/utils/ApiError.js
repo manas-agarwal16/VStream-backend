@@ -9,3 +9,5 @@ class ApiError extends Error {
       this.success = false // error, dont proceed
   }
 }
+
+export {ApiError}
