@@ -9,7 +9,8 @@ const userSchema = new mongoose.Schema(
       type: String,
       require: true,
       unique: true,
-      trim: true, // gives index , optimal for searching
+      trim: true,
+      index: true, // gives index , optimal for searching
     },
     email: {
       type: String,
@@ -21,36 +22,32 @@ const userSchema = new mongoose.Schema(
       type: String,
       require: true,
     },
-    watchHistory: {
-      type: [
-        {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Video",
-        },
-      ],
-      require: true,
-      unique: true,
-    },
     fullName: {
       type: String,
       require: true,
+    },
+    watchHistory: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Video",
+      },
+    ],
+    refreshToken: {
+      type: String,
+      default: "",
     },
     avatar: {
       type: String, // cloudinary (or AWS) url stored in db,
       require: true,
     },
-    coverimage: {
+    coverImage: {
       type: String,
-    },
-    refreshToken: {
-      type: String,
-      unique: true,
     },
   },
   { timestamps: true }
 );
 
-//In document(db's model's document) middleware functions, 'this' refers to the document. To access the model, use this.constructor.
+//In document(db's model's document) middleware functions, 'this' refers to the document of the current user who is logged in. To access the model, use this.constructor.
 
 //since we have to access the properties of document and we have to use 'this' keyword for that we cann't use arrow functions, coz 'this' keyword doesn't have context of arrow function.
 userSchema.pre("save", async function (next) {
@@ -71,7 +68,7 @@ userSchema.methods.isCorrectPassword = async function (password) {
 
 //jwt.sign(payloads,secretKey,{eexpiresIn : expiryKey}) to generator token
 userSchema.methods.generateAccessToken = async function () {
-  jwt.sign(
+  return jwt.sign(
     {
       _id: this._id, //auto saved by mongodb
       email: this.email,
@@ -84,7 +81,7 @@ userSchema.methods.generateAccessToken = async function () {
 };
 
 userSchema.methods.generateRefreshToken = async function () {
-  jwt.sign(
+  return jwt.sign(
     {
       _id: this._id,
     },

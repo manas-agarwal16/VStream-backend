@@ -1,7 +1,7 @@
 import dotenv from "dotenv"; // this is how u import dotenv require will not work for ES6 JS.
-dotenv.config({ path: "../env" });
+dotenv.config({ path: "../.env" });
 import DB from "./db/dbConnection.js";
-import { app } from "./app.js";
+import {app} from "./app.js";
 
 //after importing DB from db/db.js we r calling it to connect to the db
 DB()
