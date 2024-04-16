@@ -34,7 +34,7 @@ const userSchema = new mongoose.Schema(
     ],
     refreshToken: {
       type: String,
-      default: "",
+      default: undefined,
     },
     avatar: {
       type: String, // cloudinary (or AWS) url stored in db,
@@ -52,8 +52,7 @@ const userSchema = new mongoose.Schema(
 //since we have to access the properties of document and we have to use 'this' keyword for that we cann't use arrow functions, coz 'this' keyword doesn't have context of arrow function.
 userSchema.pre("save", async function (next) {
   // pre hook
-  if (this.isModified("password")) {
-    //isModified checks if the data is modified and "password" / anything has to be passed as string.
+  if (this.isModified("password")) { 
     this.password = await bcrypt.hash(this.password, 10); //10 : no. of salt rounds
   }
   next(); //call next middleware.

@@ -14,6 +14,7 @@ const uploadOncloudinary = async (localFilePath) => {
       public_id: "fileName",
     });
     console.log(`file is uplaoded successfully on cloudinary: ${upload?.url}`); //Cloudinary generates a URL where the uploaded file can be accessed and we save this url into our database.
+    fs.unlinkSync(localFilePath); //u can uncomment this while testing.
     return upload; // contain fields like format, width, height, url,etc.
   } catch (error) {
     console.log("error in uploading file to cloudinary: ", error);

@@ -3,7 +3,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.model.js"; // User has all access to DB.
 import { uploadOncloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-
+import jwt from "jsonwebtoken";
 
 const registerUser = asyncHandler(async (req, res) => {
   // get user details from frontend
@@ -94,7 +94,11 @@ const loginUser = asyncHandler(async (req, res) => {
   // generate access and refresh Token
 
   const { username, email, password } = req.body;
-  if ((username === "" && email === "") || password === "") {
+
+  console.log(req.body);
+  console.log(req.body.username, email, password);
+
+  if ((!username && !email) || !password) {
     throw new ApiError(400, "All fields are required.");
   }
 
@@ -117,7 +121,7 @@ const loginUser = asyncHandler(async (req, res) => {
     throw new ApiError(500, "error in creating access token");
   }
   if (!refreshToken) {
-    throw new ApiError(500, "error in refresh token");
+    throw new ApiError(500, "error in creating refresh token");
   }
 
   user.refreshToken = refreshToken;
@@ -145,4 +149,97 @@ const loginUser = asyncHandler(async (req, res) => {
     );
 });
 
-export { registerUser, loginUser };
+const logoutUser = asyncHandler(async (req, res) => {
+  const { _id } = req.user;
+
+  const user = await User.findOne({ _id: _id });
+  user.refreshToken = undefined;
+  user.save({ validateBeforeSave: false });
+
+  const options = {
+    httpOnly: true,
+    secure: true,
+  };
+
+  res
+    .status(200)
+    .clearCookie("AccessToken", options)
+    .clearCookie("RefreshToken", options)
+    .json(
+      new ApiResponse(
+        201,
+        { username: req.user.username },
+        `${req.user.username}user has logged out successfully`
+      )
+    );
+});
+
+const refreshAccessToken = asyncHandler(async (req, res) => {
+  const incomingRefreshToken =
+    req.cookies.RefreshToken || req.body.refreshToken;
+
+  if (!incomingRefreshToken) {
+    throw new ApiError(401, "unauthorized request");
+  }
+
+  //decoding incoming refresh token.
+  const decodedIncomingRefreshToken = jwt.verify(
+    incomingRefreshToken,
+    process.env.REFRESH_TOKEN_KEY
+  );
+
+  if (!decodedIncomingRefreshToken) {
+    throw new ApiError(501, "error in decoding refresh token");
+  }
+
+  const user = await User.findOne({ _id: decodedIncomingRefreshToken._id });
+
+  if (!user) {
+    throw new ApiError(401, "Invalid refreshToken");
+  }
+
+  const dbRefreshToken = user.refreshToken;
+
+  if (!dbRefreshToken) {
+    throw new ApiError(401, "user has logged out already!!!");
+  }
+
+  if (incomingRefreshToken !== dbRefreshToken) {
+    throw new ApiError(401, "unauthorized request");
+  }
+
+  const newAccessToken = user.generateAccessToken();
+  const newRefreshToken = user.generateRefreshToken();
+
+  if (!newAccessToken) {
+    throw new ApiError(501, "error is generating accessToken");
+  }
+
+  if (!newRefreshToken) {
+    throw new ApiError(501, "error in generating refresh token");
+  }
+
+  user.refreshToken = newRefreshToken;
+  user.save({ validateBeforeSave: false });
+
+  const options = {
+    httpOnly: true,
+    secure: true,
+  };
+  res
+    .status(201)
+    .cookie("AccessToken", newAccessToken, options) //AccessToken cookie's value will get replaced by newAccessToken.
+    .cookie("RefreshToken", newRefreshToken, options)
+    .json(
+      new ApiResponse(
+        201,
+        {
+          accessToken: newAccessToken,
+          refreshToken: newRefreshToken,
+          username: user.username,
+        },
+        "accesstoken is refreshed successfully!!!"
+      )
+    );
+});
+export { registerUser, loginUser, logoutUser, refreshAccessToken };
