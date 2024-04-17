@@ -1,10 +1,10 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
-import jwt  from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 
-// we can write _ in place of res of theres no use of res, although its not mondatory.. 
-const verifyJWT = asyncHandler(async (req, _ , next) => {
+// we can write _ in place of res of theres no use of res, although its not mondatory..
+const verifyJWT = asyncHandler(async (req, _, next) => {
   try {
     const token =
       req.cookies?.AccessToken ||
@@ -31,7 +31,7 @@ const verifyJWT = asyncHandler(async (req, _ , next) => {
 
     req.user = user; //here we have created a custom middleware req.user so that we can access user'details using req.user.
 
-    next(); //after this next the next function in row i.e logoutUser in this case will be executed.
+    next(); //after this 'next' the next function in row will be called.
   } catch (error) {
     throw new ApiError(401, "invalid access token");
   }

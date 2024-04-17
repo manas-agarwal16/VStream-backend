@@ -11,9 +11,13 @@ import {
   loginUser,
   logoutUser,
   refreshAccessToken,
+  updateUserDetails,
+  updateAvatar,
+  updateCoverImage,
+  removeCoverImage,
+  changeCurrentUserPassword,
 } from "../controllers/user.controller.js";
 
-console.log("user route: ");
 router.route("/register").post(
   upload.fields([
     { name: "avatar", maxCount: 1 },
@@ -27,5 +31,27 @@ router.route("/login").post(loginUser);
 router.route("/logout").get(verifyJWT, logoutUser);
 
 router.route("/refresh-token").post(refreshAccessToken);
+
+router.route("/update-details").post(verifyJWT, updateUserDetails);
+
+router
+  .route("/update-avatar")
+  .post(
+    verifyJWT,
+    upload.fields([{ name: "avatar", maxCount: 1 }]),
+    updateAvatar
+  );
+
+router
+  .route("/update-coverImage")
+  .post(
+    verifyJWT,
+    upload.fields([{ name: "coverImage", maxCount: 1 }]),
+    updateCoverImage
+  );
+
+router.route("/remove-coverImage").post(verifyJWT, removeCoverImage);
+
+router.route("/change-password").post(verifyJWT, changeCurrentUserPassword);
 
 export default router;

@@ -52,17 +52,28 @@ const userSchema = new mongoose.Schema(
 //since we have to access the properties of document and we have to use 'this' keyword for that we cann't use arrow functions, coz 'this' keyword doesn't have context of arrow function.
 userSchema.pre("save", async function (next) {
   // pre hook
-  if (this.isModified("password")) { 
-    this.password = await bcrypt.hash(this.password, 10); //10 : no. of salt rounds
-  }
-  next(); //call next middleware.
+  try {
+    if (this.isModified("password")) { 
+      this.password = await bcrypt.hash(this.password, 10); //10 : no. of salt rounds
+    }
+    next();
+  } catch (error) {
+    console.log("error in hashing the password");
+    throw error;
+  } //call next middleware.
 });
 
 //creating our custom method to check if passed password is correct.
 //mongoose gives us .methods object to create our own custom methods
 userSchema.methods.isCorrectPassword = async function (password) {
-  const check = await bcrypt.compare(password, this.password); //this.password refers to document password.
-  return check; //boolean value.
+  try {
+    const check = await bcrypt.compare(password, this.password); //this.password refers to document password.
+    return check; //boolean value.
+    
+  } catch (error) {
+    console.log("error is comparing the passwords");
+    throw error;
+  }
 };
 
 //jwt.sign(payloads,secretKey,{eexpiresIn : expiryKey}) to generator token

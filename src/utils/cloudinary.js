@@ -13,8 +13,8 @@ const uploadOncloudinary = async (localFilePath) => {
       resource_type: "auto", //auto detects itself , either video , image, file ...
       public_id: "fileName",
     });
-    console.log(`file is uplaoded successfully on cloudinary: ${upload?.url}`); //Cloudinary generates a URL where the uploaded file can be accessed and we save this url into our database.
-    fs.unlinkSync(localFilePath); //u can uncomment this while testing.
+    console.log(`file is uploaded successfully on cloudinary: ${upload?.url}`); //Cloudinary generates a URL where the uploaded file can be accessed and we save this url into our database.
+    // fs.unlinkSync(localFilePath); //u can uncomment this while testing.
     return upload; // contain fields like format, width, height, url,etc.
   } catch (error) {
     console.log("error in uploading file to cloudinary: ", error);
@@ -25,4 +25,15 @@ const uploadOncloudinary = async (localFilePath) => {
   }
 };
 
-export { uploadOncloudinary };
+const deleteFileFromCloudinary = async (public_id) => {
+  try {
+    const result = await cloudinary.uploader.destroy(public_id);
+    console.log("deletion of cloudinay information: ", result);
+    return result;
+  } catch (error) {
+    console.log("error in deleting file from cloudinary");
+    throw error;
+  }
+};
+
+export { uploadOncloudinary , deleteFileFromCloudinary};
