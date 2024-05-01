@@ -7,9 +7,9 @@ import {
 } from "../utils/cloudinary.js";
 
 import bcrypt from "bcrypt";
-
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 
 const registerUser = asyncHandler(async (req, res) => {
   // get user details from frontend
@@ -67,7 +67,7 @@ const registerUser = asyncHandler(async (req, res) => {
   }
 
   //registering into the db
-  const user = await User.create({
+  const user = new User({
     //User.create is to enter the entries into the db and is returns all the entered entries in object form
     username: username.toLowerCase(),
     fullName,
@@ -76,6 +76,14 @@ const registerUser = asyncHandler(async (req, res) => {
     coverImage: cloudinaryCoverImageURL?.url || "",
     password,
   });
+  try {
+    await user.save();
+  } catch (error) {
+    throw new ApiError(
+      501,
+      "error in saving the user'details to the database!!"
+    );
+  }
 
   //removing password and refresh token to not sending it to frontend by using select method. find methods return whole object.
   const createdUser = await User.findById(user._id).select(
@@ -148,9 +156,10 @@ const loginUser = asyncHandler(async (req, res) => {
       new ApiResponse(
         201,
         {
+          username: username,
+          avatar: user.avatar,
           accessToken: accessToken,
           refreshToken: refreshToken,
-          username: username,
         },
         "user has logged in successfully"
       )
@@ -251,15 +260,28 @@ const changeCurrentUserPassword = asyncHandler(async (req, res) => {
 
   const user = req.user;
   console.log(user);
-  console.log("here");
-  const validOldPassword = await user.isCorrectPassword(oldPassword);
+
+  let currentUserPassword = await User.findOne({ _id: user._id });
+  currentUserPassword = currentUserPassword.password;
+  console.log(currentUserPassword);
+
+  const validOldPassword = await bcrypt.compare(
+    oldPassword,
+    currentUserPassword
+  );
   console.log(validOldPassword);
 
   if (!validOldPassword) {
     throw new ApiError(401, "wrong old password");
   }
-  user.password = newPassword; // setting new password , not saved yet.
-  await user.save();
+  const newHashPassword = await bcrypt.hash(newPassword, 10);
+
+  if (!newHashPassword) {
+    throw new ApiError(501, "error in hashing password");
+  }
+  user.password = newHashPassword;
+  await user.save({ validateBeforeSave: false });
+
   res
     .status(201)
     .json(
@@ -302,6 +324,7 @@ const updateUserDetails = asyncHandler(async (req, res) => {
 
 const updateAvatar = asyncHandler(async (req, res) => {
   let avatarLocalPath;
+
   if (req.files && req.files.avatar && req.files.avatar[0]) {
     avatarLocalPath = req.files.avatar[0].path;
   }
@@ -311,11 +334,30 @@ const updateAvatar = asyncHandler(async (req, res) => {
   }
 
   const newAvatar = await uploadOncloudinary(avatarLocalPath);
+
   console.log("newAvatar:", newAvatar);
   if (!newAvatar) {
     throw new ApiError(501, "error in uploading new avatar to cloudinary.");
   }
   const user = req.user;
+
+  //deleting oldAvatar from cloudinary: 'http://res.cloudinary.com/dgrm75hbj/image/upload/v1713352206/b4itkxym6dcywvwqvuwu.png', this provided url on file upload by cloudinary contains the unique public_id of a file which is required to delete a specific file , extracting that public_id below;
+  const oldAvatar = user.avatar;
+  let oldAvatarPublic_id = oldAvatar.replace(
+    "http://res.cloudinary.com/dgrm75hbj/image/upload/",
+    ""
+  );
+
+  const array = oldAvatarPublic_id.split("/"); //string to array based on "/";
+
+  oldAvatarPublic_id = array[1].replace(".png", "");
+  console.log(oldAvatarPublic_id);
+
+  const deletionResult = await deleteFileFromCloudinary(oldAvatarPublic_id);
+
+  if (!deletionResult) {
+    throw new ApiResponse(501, "error in deleting old avatar from clouinary!!");
+  }
 
   user.avatar = newAvatar.url;
   user.save({ validateBeforeSave: false });
@@ -327,6 +369,29 @@ const updateAvatar = asyncHandler(async (req, res) => {
 
 const removeCoverImage = asyncHandler(async (req, res) => {
   const user = req.user;
+
+  const oldCoverImage = user.coverImage;
+
+  if (oldCoverImage) {
+    let oldCoverImagePublic_id = oldCoverImage.replace(
+      "http://res.cloudinary.com/dgrm75hbj/image/upload/",
+      ""
+    );
+
+    const array = oldCoverImagePublic_id.split("/"); //string to array based on "/";
+
+    oldCoverImagePublic_id = array[1].replace(".png", "");
+    console.log(oldAvatarPublic_id);
+
+    const deletionResult = await deleteFileFromCloudinary(oldAvatarPublic_id);
+
+    if (!deletionResult) {
+      throw new ApiResponse(
+        501,
+        "error in deleting old coverImage from cloudinary!!"
+      );
+    }
+  }
   user.coverImage = "";
   user.save({ validateBeforeSave: false });
   res
@@ -353,6 +418,29 @@ const updateCoverImage = asyncHandler(async (req, res) => {
   }
   const user = req.user;
 
+  const oldCoverImage = user.coverImage;
+
+  if (oldCoverImage) {
+    let oldCoverImagePublic_id = oldCoverImage.replace(
+      "http://res.cloudinary.com/dgrm75hbj/image/upload/",
+      ""
+    );
+
+    const array = oldCoverImagePublic_id.split("/"); //string to array based on "/";
+
+    oldCoverImagePublic_id = array[1].replace(".png", "");
+    console.log(oldAvatarPublic_id);
+
+    const deletionResult = await deleteFileFromCloudinary(oldAvatarPublic_id);
+
+    if (!deletionResult) {
+      throw new ApiResponse(
+        501,
+        "error in deleting old coverImage from cloudinary!!"
+      );
+    }
+  }
+
   user.coverImage = newCoverImage.url;
   user.save({ validateBeforeSave: false });
 
@@ -367,6 +455,90 @@ const updateCoverImage = asyncHandler(async (req, res) => {
     );
 });
 
+const getUserChannelProfile = asyncHandler(async (req, res) => {
+  const { username } = req.params;
+  if (!username) {
+    throw new ApiError(401, "username does not exists");
+  }
+
+  const channel = User.aggregate([
+    {
+      $match: {
+        username: username.toLowerCase(),
+      },
+    },
+    {
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id", //_id is the id of the document passed by $match.
+        foreignField: "channel", //documents where channel = _id
+        as: "subscribers",
+      },
+    },
+    {
+      $lookup: {
+        from: "subscribers",
+        localField: "_id",
+        foreignField: "subscriber",
+        as: "subscribedTo",
+      },
+    },
+    {
+      $addFields: {
+        subscriberCount: {
+          $size: "$subscribers", //$ sign is used if it is a field in the output of aggregation
+        },
+        subscribedToCount: {
+          $size: "$subscribedTo",
+        },
+        isSubscribed: {
+          $cond: {
+            if: { $in: [req.user?._id, "$subscribers.subscriber"] },// $in checks (can in both inside array and object) if req.user._id is a value in subscriber.
+            then: true,
+            else: false,
+          },
+        },
+      },
+    },
+    {
+      $project: {
+        subscriberCount: 1,
+        isSubscribed: 1,
+        subscribedToCount: 1,
+        avatar: 1,
+        coverImage: 1,
+        username: 1,
+        email: 1,
+        createdAt: 1,
+        fullName: 1,
+      },
+    },
+  ]);
+
+  console.log(`profile : ${channel}`);
+  return res
+    .send(201)
+    .json(new ApiResponse(201, { channel: channel }, "user profile details"));
+});
+
+const getWatchHistory = asyncHandler(async (req,res) => {
+  const watchHistory = await User.aggregate([
+    {
+      $match : {
+        _id : new mongoose.Types.ObjectId(req.user?._id)
+      }
+    },
+    {
+      $lookup : {
+        from : "videos",
+        localField : "watchHistory",
+        foreignField : "_id",
+        as : "watchHistory",
+      }
+    }
+  ])
+})
+
 export {
   registerUser,
   loginUser,
@@ -377,4 +549,5 @@ export {
   updateCoverImage,
   removeCoverImage,
   changeCurrentUserPassword,
+  getUserChannelProfile,
 };

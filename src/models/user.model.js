@@ -54,6 +54,7 @@ userSchema.pre("save", async function (next) {
   // pre hook
   try {
     if (this.isModified("password")) { 
+      // its suggesting that await has no use but its necessary.
       this.password = await bcrypt.hash(this.password, 10); //10 : no. of salt rounds
     }
     next();
@@ -67,6 +68,7 @@ userSchema.pre("save", async function (next) {
 //mongoose gives us .methods object to create our own custom methods
 userSchema.methods.isCorrectPassword = async function (password) {
   try {
+    console.log("dbPassword: ",this.password);
     const check = await bcrypt.compare(password, this.password); //this.password refers to document password.
     return check; //boolean value.
     
