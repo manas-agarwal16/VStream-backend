@@ -5,7 +5,11 @@ import jwt from "jsonwebtoken";
 
 const userSchema = new mongoose.Schema(
   {
-    username: {
+    fullName: {
+      type: String,
+      require: true,
+    },
+    username: { //channel name
       type: String,
       require: true,
       unique: true,
@@ -22,9 +26,9 @@ const userSchema = new mongoose.Schema(
       type: String,
       require: true,
     },
-    fullName: {
-      type: String,
-      require: true,
+    description: {
+      type : String,
+      default : null,
     },
     watchHistory: [
       {
@@ -43,17 +47,18 @@ const userSchema = new mongoose.Schema(
     coverImage: {
       type: String,
     },
+    premium : {
+      type : Boolean,
+      default : false
+    },
   },
   { timestamps: true }
 );
 
-//In document(db's model's document) middleware functions, 'this' refers to the document of the current user who is logged in. To access the model, use this.constructor.
-
-//since we have to access the properties of document and we have to use 'this' keyword for that we cann't use arrow functions, coz 'this' keyword doesn't have context of arrow function.
 userSchema.pre("save", async function (next) {
   // pre hook
   try {
-    if (this.isModified("password")) { 
+    if (this.isModified("password")) {
       // its suggesting that await has no use but its necessary.
       this.password = await bcrypt.hash(this.password, 10); //10 : no. of salt rounds
     }
@@ -64,14 +69,13 @@ userSchema.pre("save", async function (next) {
   } //call next middleware.
 });
 
-//creating our custom method to check if passed password is correct.
 //mongoose gives us .methods object to create our own custom methods
+//creating our custom method to check if passed password is correct.
 userSchema.methods.isCorrectPassword = async function (password) {
   try {
-    console.log("dbPassword: ",this.password);
+    console.log("dbPassword: ", this.password);
     const check = await bcrypt.compare(password, this.password); //this.password refers to document password.
     return check; //boolean value.
-    
   } catch (error) {
     console.log("error is comparing the passwords");
     throw error;

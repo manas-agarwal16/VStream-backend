@@ -11,11 +11,13 @@ import {
   loginUser,
   logoutUser,
   refreshAccessToken,
-  updateUserDetails,
   updateAvatar,
   updateCoverImage,
   removeCoverImage,
-  changeCurrentUserPassword,
+  changePassword,
+  verifyOTP,
+  resendOTP,
+  userProfile
 } from "../controllers/user.controller.js";
 
 router.route("/register").post(
@@ -26,14 +28,12 @@ router.route("/register").post(
   registerUser
 );
 
+router.route("/register").post(registerUser);
+router.route("/verify-otp").post(verifyOTP);
+router.route("/resend-otp").get(resendOTP);
 router.route("/login").post(loginUser);
-
 router.route("/logout").get(verifyJWT, logoutUser);
-
-router.route("/refresh-token").post(refreshAccessToken);
-
-router.route("/update-details").post(verifyJWT, updateUserDetails);
-
+router.route("/refresh-access-token").post(refreshAccessToken);
 router
   .route("/update-avatar")
   .post(
@@ -52,6 +52,8 @@ router
 
 router.route("/remove-coverImage").post(verifyJWT, removeCoverImage);
 
-router.route("/change-password").post(verifyJWT, changeCurrentUserPassword);
+router.route("/change-password").post(verifyJWT, changePassword);
+
+router.route("/user-profile").get(userProfile);
 
 export default router;
