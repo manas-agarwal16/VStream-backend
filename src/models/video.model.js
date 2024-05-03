@@ -3,17 +3,17 @@ import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 
 const videoSchema = new mongoose.Schema(
   {
+    owner: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "user",
+      require: true,
+    },
     videoFile: {
       type: String,
       require: true,
     },
     thumbnail: {
       type: String,
-      require: true,
-    },
-    owner: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "user",
       require: true,
     },
     title: {
@@ -34,10 +34,9 @@ const videoSchema = new mongoose.Schema(
       require: true,
       default: 0,
     },
-    isPublished: {
-      type: Boolean,
+    videoTag: {
+      type: String,
       require: true,
-      default: false,
     },
   },
   { timestamps: true }
@@ -45,4 +44,4 @@ const videoSchema = new mongoose.Schema(
 
 videoSchema.plugin(mongooseAggregatePaginate); //plugin to mongoose-aggregate-paginate-v2 to use aggregate queries
 
-export const Video = mongoose.model("Video",videoSchema);
+export const Video = mongoose.model("Video", videoSchema);

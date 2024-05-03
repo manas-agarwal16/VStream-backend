@@ -18,7 +18,8 @@ app.use(express.static("Public")); //serves static files like html, css, js in p
 
 //route import
 import userRouter from "./routes/user.routes.js";
+import videoRouter from "./routes/video.route.js"
 
-app.use("/api/v1/users", userRouter); //when /api/v1/users endpoint will hit the control will be given to userRouter means in user.routes.js file.
-
+app.use("/api/v1/users", userRouter);
+app.use("/api/v1/videos",videoRouter);
 export { app };
