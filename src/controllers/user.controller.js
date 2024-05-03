@@ -551,66 +551,20 @@ const updateCoverImage = asyncHandler(async (req, res) => {
     );
 });
 
+//clear
 const userProfile = asyncHandler(async (req, res) => {
   let { username } = req.params;
+  console.log(username);
+
+  const user = req.user;
+  if (!user) {
+    throw new ApiError(401, "unauthorization request");
+  }
+
   username = username.toLowerCase().trim();
   if (!username) {
     throw new ApiError(401, "username required");
   }
-
-  // const channel = await User.aggregate([
-  //   {
-  //     $match: {
-  //       username: username.toLowerCase(),
-  //     },
-  //   },
-  //   {
-  //     $lookup: {
-  //       from: "subscriptions",
-  //       localField: "_id", //_id is the id of the document passed by $match.
-  //       foreignField: "channel", //documents where channel = _id
-  //       as: "subscribers",
-  //     },
-  //   },
-  //   {
-  //     $lookup: {
-  //       from: "subscribers",
-  //       localField: "_id",
-  //       foreignField: "subscriber",
-  //       as: "subscribedTo",
-  //     },
-  //   },
-  //   {
-  //     $addFields: {
-  //       subscriberCount: {
-  //         $size: "$subscribers", //$ sign is used if it is a field in the output of aggregation
-  //       },
-  //       subscribedToCount: {
-  //         $size: "$subscribedTo",
-  //       },
-  //       isSubscribed: {
-  //         $cond: {
-  //           if: { $in: [req.user?._id, "$subscribers.subscriber"] }, // $in checks (can in both inside array and object) if req.user._id is a value in subscriber.
-  //           then: true,
-  //           else: false,
-  //         },
-  //       },
-  //     },
-  //   },
-  //   {
-  //     $project: {
-  //       subscriberCount: 1,
-  //       isSubscribed: 1,
-  //       subscribedToCount: 1,
-  //       avatar: 1,
-  //       coverImage: 1,
-  //       username: 1,
-  //       email: 1,
-  //       createdAt: 1,
-  //       fullName: 1,
-  //     },
-  //   },
-  // ]);
 
   const channel = await User.aggregate([
     {
@@ -619,7 +573,6 @@ const userProfile = asyncHandler(async (req, res) => {
       },
     },
     {
-      //for recent videos
       $lookup: {
         from: "videos",
         localField: "_id",
@@ -636,29 +589,110 @@ const userProfile = asyncHandler(async (req, res) => {
       $unwind: "$allVideos",
     },
     {
-      $sort: { "$allVideos.createdAt": -1 },
+      $sort: { "allVideos.createdAt": -1 },
     },
     {
       $group: {
         _id: "$_id",
+        fullName: { $first: "$fullName" },
+        username: { $first: "$username" },
+        email: { $first: "$email" },
+        description: { $first: "$description" },
+        avatar: { $first: "$avatar" },
+        allVideos: { $push: "$allVideos" },
+        coverImage: { $first: "$coverImage" },
+        numberOfVideos: { $first: "$numberOfVideos" },
         recentVideos: { $push: "$allVideos" },
       },
     },
     {
       $project: {
-        password: 0,
-        refreshToken: 0,
-        watchHistory: 0,
-        premium: 0,
-        recentVideos: { $slice: ["$recentVideos", 8] },
+        _id: 1,
+        fullName: 1,
+        username: 1,
+        email: 1,
+        description: 1,
+        avatar: 1,
+        allVideos: 1,
+        coverImage: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        __v: 1,
+        recentVideos: { $slice: ["$recentVideos", 4] }, // Select only 5 documents in recentVideos array
+      },
+    },
+    {
+      $unwind: "$allVideos",
+    },
+    {
+      $sort: { "allVideos.views": -1 },
+    },
+    {
+      $group: {
+        _id: "$_id",
+        fullName: { $first: "$fullName" },
+        username: { $first: "$username" },
+        email: { $first: "$email" },
+        description: { $first: "$description" },
+        avatar: { $first: "$avatar" },
+        allVideos: { $push: "$allVideos" },
+        coverImage: { $first: "$coverImage" },
+        numberOfVideos: { $first: "$numberOfVideos" },
+        recentVideos: { $first: "$recentVideos" },
+        mostViewedVideos: { $push: "$allVideos" },
+      },
+    },
+    {
+      $project: {
+        _id: 1,
+        fullName: 1,
+        username: 1,
+        email: 1,
+        description: 1,
+        avatar: 1,
+        // allVideos: 1,
+        coverImage: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        __v: 1,
+        recentVideos: { $slice: ["$recentVideos", 4] }, // Select only 5 documents in recentVideos array
+        mostViewedVideos: { $slice: ["$mostViewedVideos", 4] },
+      },
+    },
+    {
+      $lookup: {
+        from: "Subscription",
+        localField: "_id",
+        foreignField: "channel",
+        as: "subscribers",
+      },
+    },
+    {
+      $lookup: {
+        from: "Subscription",
+        localField: "_id",
+        foreignField: "subscriber",
+        as: "subscribing",
+      },
+    },
+    {
+      $addFields: {
+        subscribers: { $size: "$subscribers" },
+        subscribing: { $size: "$subscribing" },
+        isSubscribed: {
+          $cond: {
+            if: { $in: [user._id, "$subscribers.subscriber"] },
+            then: true,
+            else: false,
+          },
+        },
       },
     },
   ]);
 
-  console.log(`profile : ${channel}`);
   return res
-    .send(201)
-    .json(new ApiResponse(201, { channel: channel }, "user profile details"));
+    .status(201)
+    .json(new ApiResponse(201, { channel }, "user profile details"));
 });
 
 const getWatchHistory = asyncHandler(async (req, res) => {

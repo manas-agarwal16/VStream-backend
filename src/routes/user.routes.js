@@ -54,6 +54,6 @@ router.route("/remove-coverImage").post(verifyJWT, removeCoverImage);
 
 router.route("/change-password").post(verifyJWT, changePassword);
 
-router.route("/user-profile").get(userProfile);
+router.route("/user-profile/:username").get(verifyJWT , userProfile);
 
 export default router;
