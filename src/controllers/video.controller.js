@@ -207,4 +207,56 @@ const unlikeVideo = asyncHandler(async (req, res) => {
     .json(new ApiResponse(201, { likes: likes }, "U have unlike the video"));
 });
 
-export { uploadVideo, watchVideo, likeVideo, unlikeVideo };
+//clear
+const getVideos = asyncHandler(async (_, res) => {
+  const videos = await Video.find();
+  let nineVideo = [];
+  if (videos.length > 9) {
+    for (let i = 1; i <= 9; i++) {
+      const index = Math.floor(Math.random() * 9);
+      const doc = videos[index];
+      if (nineVideo.includes(doc)) {
+        i--;
+      } else {
+        nineVideo.push(doc);
+      }
+    }
+  } else {
+    nineVideo = videos;
+  }
+  res
+    .status(201)
+    .json(
+      new ApiResponse(201, { videos: nineVideo }, "videos fetched successfully")
+    );
+});
+
+//clear , Remember : mention in the frontend that ur video title video tag and ur description helps user to find ur vidio through search.
+const search = asyncHandler(async (req, res) => {
+  const { search } = req.query;
+  const videos = await Video.find({
+    $or: [
+      { title: { $regex: search, $options: "i" } }, //regex for regular expression
+      { videoTag: { $regex: search, $options: "i" } },
+      { description: { $regex: search, $options: "i" } },
+    ],
+  });
+  if (videos.length === 0) {
+    res
+      .status(201)
+      .json(
+        new ApiResponse(201, "Sorry, your search did not match any documents")
+      );
+  }
+  res
+    .status(201)
+    .json(
+      new ApiResponse(
+        201,
+        { videos },
+        "videos with related search fetched successfully"
+      )
+    );
+});
+
+export { uploadVideo, watchVideo, likeVideo, unlikeVideo, getVideos, search };
