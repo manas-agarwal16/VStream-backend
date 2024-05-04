@@ -1,6 +1,6 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
-import { User } from "../models/user.model.js"; // User has all access to DB.
+import { User } from "../models/users.model.js"; // User has all access to DB.
 import {
   uploadOncloudinary,
   deleteFileFromCloudinary,
@@ -9,7 +9,6 @@ import {
 import bcrypt from "bcrypt";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
-import mongoose from "mongoose";
 import { generateOTP, sendOTPThroughEmail } from "../utils/otp.js";
 import { OtpModel } from "../models/Otp.model.js";
 
@@ -566,7 +565,7 @@ const userProfile = asyncHandler(async (req, res) => {
     throw new ApiError(401, "username required");
   }
 
-  const channel = await User.aggregate([
+  let channel = await User.aggregate([
     {
       $match: {
         username: username,
@@ -690,16 +689,29 @@ const userProfile = asyncHandler(async (req, res) => {
     },
   ]);
 
+  if(channel.length > 0){
+    channel = channel[0]
+  }
+  else{
+    channel = "User hasn't posted anything yet";
+  }
+
   return res
     .status(201)
     .json(new ApiResponse(201, { channel }, "user profile details"));
 });
 
 const getWatchHistory = asyncHandler(async (req, res) => {
-  const watchHistory = await User.aggregate([
+  const user = req.user;
+
+  if (!user) {
+    throw new ApiError(401, "Invalid request");
+  }
+
+  const watchedVideos = await User.aggregate([
     {
       $match: {
-        _id: new mongoose.Types.ObjectId(req.user?._id),
+        _id: user._id,
       },
     },
     {
@@ -707,10 +719,30 @@ const getWatchHistory = asyncHandler(async (req, res) => {
         from: "videos",
         localField: "watchHistory",
         foreignField: "_id",
-        as: "watchHistory",
+        as: "watchedVideos",
+      },
+    },
+    {
+      $unwind: "$watchedVideos",
+    },
+    {
+      $project: {
+        watchedVideos: 1,
       },
     },
   ]);
+
+  console.log(watchedVideos);
+
+  res
+    .status(201)
+    .json(
+      new ApiResponse(
+        201,
+        watchedVideos,
+        "Watch History of a user fetched successfully"
+      )
+    );
 });
 
 export {

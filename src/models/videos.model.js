@@ -27,16 +27,15 @@ const videoSchema = new mongoose.Schema(
     duration: {
       type: Number, //comes with cloudinary url
       require: true,
-      default: 0,
     },
     views: {
       type: Number,
-      require: true,
       default: 0,
     },
     videoTag: {
       type: String,
       require: true,
+      enum : ["Games","Learning","Music","Stand up","News","Shows"]
     },
   },
   { timestamps: true }

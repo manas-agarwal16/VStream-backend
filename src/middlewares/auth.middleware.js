@@ -1,6 +1,6 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
-import { User } from "../models/user.model.js";
+import { User } from "../models/users.model.js";
 import jwt from "jsonwebtoken";
 
 // we can write _ in place of res of theres no use of res, although its not mondatory..

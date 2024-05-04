@@ -17,7 +17,8 @@ import {
   changePassword,
   verifyOTP,
   resendOTP,
-  userProfile
+  userProfile,
+  getWatchHistory
 } from "../controllers/user.controller.js";
 
 router.route("/register").post(
@@ -55,5 +56,7 @@ router.route("/remove-coverImage").post(verifyJWT, removeCoverImage);
 router.route("/change-password").post(verifyJWT, changePassword);
 
 router.route("/user-profile/:username").get(verifyJWT , userProfile);
+
+router.route("/watch-history").get(verifyJWT,getWatchHistory);
 
 export default router;
