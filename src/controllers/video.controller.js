@@ -7,6 +7,8 @@ import { uploadOncloudinary } from "../utils/cloudinary.js";
 import { Views } from "../models/views.model.js";
 import { Likes } from "../models/likes.model.js";
 import { Subscription } from "../models/subscriptions.model.js";
+import { Comment } from "../models/comment.model.js";
+import mongoose from "mongoose";
 
 //clear
 const uploadVideo = asyncHandler(async (req, res) => {
@@ -259,4 +261,124 @@ const search = asyncHandler(async (req, res) => {
     );
 });
 
-export { uploadVideo, watchVideo, likeVideo, unlikeVideo, getVideos, search };
+//clear
+const comment = asyncHandler(async (req, res) => {
+  const user = req.user;
+  if (!user) {
+    throw new ApiError(401, "Invalid request");
+  }
+  const { content, video_id, parentComment_id } = req.body;
+  if (!content) {
+    throw new ApiError(401, "Comment content is required");
+  }
+
+  if (!(video_id || parentComment_id)) {
+    throw new ApiError(401, "video_id or parentComment_id is required");
+  }
+
+  const newComment = new Comment({
+    content,
+    video_id,
+    parentComment_id,
+  });
+  await newComment
+    .save()
+    .then(() => {
+      res
+        .status(201)
+        .json(new ApiResponse(201, "Your comment marked successfully"));
+    })
+    .catch((err) => {
+      throw new ApiError(501, "error in saving comment", err);
+    });
+});
+
+//clear
+const getComments = asyncHandler(async (req,res) => {
+  const { video_id, parentComment_id } = req.body;
+  if (parentComment_id) {
+    const childComments = await Comment.find({ parentComment_id });
+    if (childComments.length === 0) {
+      res.status(201).json(new ApiResponse(201, "No comments yet"));
+    } else {
+      res
+        .status(201)
+        .json(
+          new ApiResponse(
+            201,
+            { comments: childComments },
+            "comments fetched successfully"
+          )
+        );
+    }
+  } else if (video_id) {
+    const videoComments = await Comment.find({ video_id });
+
+    if (videoComments.length === 0) {
+      res.status(201).json(new ApiResponse(201, "No comments yet"));
+    } else {
+      res
+        .status(201)
+        .json(
+          new ApiResponse(
+            201,
+            { comments: videoComments },
+            "comments fetched successfully"
+          )
+        );
+    }
+  } else {
+    throw new ApiError(401, "video_id or parentComment_id is required");
+  }
+});
+
+const likedVideos = asyncHandler(async (req,res) => {
+  const user = req.user;
+  if(!user){
+    throw new ApiError(401,"Invalid request");
+  }
+  const videos = await Likes.aggregate([
+    {
+      $match : {
+        user_id : new mongoose.Types.ObjectId(user._id),
+      }
+    },
+    {
+      $lookup : {
+        from : "videos",
+        localField : "video_id",
+        foreignField : "_id",
+        as : "Videos",
+      }
+    },
+    // {
+    //   $group : {
+    //     _id : "$user_id",
+    //     likedVideos : {$push : "$Videos"}
+    //   }
+    // },
+    // {
+    //   $project : {
+    //     likedVideos: 1,
+    //   }
+    // },
+  ]);
+  if(videos.length === 0){
+    res.status(201).json(new ApiResponse(201,"You haven't liked any videos yet"));
+  }
+  else{
+    res.status(201).json(new ApiResponse(201,{likesVideos : videos},"liked videos fetched successfully"));
+  }
+})
+
+export {
+  uploadVideo,
+  watchVideo,
+  likeVideo,
+  unlikeVideo,
+  getVideos,
+  search,
+  comment,
+  getComments,
+  likedVideos
+};
