@@ -10,8 +10,8 @@ const subscriptionSchema = new mongoose.Schema(
         require: true,
         unique: true,
       },
-    channel: {
-      // one whose channel is being subscribed;
+    subscribeTo: {
+      // username is being subscribed
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       require: true,
@@ -21,7 +21,4 @@ const subscriptionSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-export const Subscription = mongoose.model(
-  "Subscription",
-  subscriptionSchema
-);
+export const Subscription = mongoose.model("Subscription", subscriptionSchema);

@@ -37,6 +37,10 @@ const videoSchema = new mongoose.Schema(
       require: true,
       enum : ["Games","Learning","Music","Stand up","News","Shows"]
     },
+    username : {
+      type : String,
+      require : true
+    }
   },
   { timestamps: true }
 );

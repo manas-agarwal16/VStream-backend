@@ -53,6 +53,7 @@ const uploadVideo = asyncHandler(async (req, res) => {
     title,
     description,
     videoTag,
+    username: user.username,
   });
 
   await video.save().then(() => {
@@ -294,7 +295,7 @@ const comment = asyncHandler(async (req, res) => {
 });
 
 //clear
-const getComments = asyncHandler(async (req,res) => {
+const getComments = asyncHandler(async (req, res) => {
   const { video_id, parentComment_id } = req.body;
   if (parentComment_id) {
     const childComments = await Comment.find({ parentComment_id });
@@ -332,44 +333,127 @@ const getComments = asyncHandler(async (req,res) => {
   }
 });
 
-const likedVideos = asyncHandler(async (req,res) => {
+//clear
+const likedVideos = asyncHandler(async (req, res) => {
   const user = req.user;
-  if(!user){
-    throw new ApiError(401,"Invalid request");
+  if (!user) {
+    throw new ApiError(401, "Invalid request");
   }
   const videos = await Likes.aggregate([
     {
-      $match : {
-        user_id : new mongoose.Types.ObjectId(user._id),
-      }
+      $match: {
+        user_id: new mongoose.Types.ObjectId(user._id),
+      },
     },
     {
-      $lookup : {
-        from : "videos",
-        localField : "video_id",
-        foreignField : "_id",
-        as : "Videos",
-      }
+      $lookup: {
+        from: "videos",
+        localField: "video_id",
+        foreignField: "_id",
+        as: "Videos",
+      },
     },
-    // {
-    //   $group : {
-    //     _id : "$user_id",
-    //     likedVideos : {$push : "$Videos"}
-    //   }
-    // },
-    // {
-    //   $project : {
-    //     likedVideos: 1,
-    //   }
-    // },
+    {
+      $unwind: "$Videos",
+    },
+    {
+      $group: {
+        _id: "$user_id",
+        likedVideos: { $push: "$Videos" },
+      },
+    },
   ]);
-  if(videos.length === 0){
-    res.status(201).json(new ApiResponse(201,"You haven't liked any videos yet"));
+  if (videos.length === 0) {
+    res
+      .status(201)
+      .json(new ApiResponse(201, "You haven't liked any videos yet"));
+  } else {
+    res
+      .status(201)
+      .json(
+        new ApiResponse(201, videos[0], "liked videos fetched successfully")
+      );
   }
-  else{
-    res.status(201).json(new ApiResponse(201,{likesVideos : videos},"liked videos fetched successfully"));
+});
+
+//clear
+const subscribe = asyncHandler(async (req, res) => {
+  const user = req.user;
+  const { username } = req.body; //frontend- username = channel
+  if (!username) {
+    throw new ApiError(401, "video_id is required");
   }
-})
+
+  const subscribeTo = await User.findOne({ username });
+  if (!subscribeTo) {
+    throw new ApiError(401, "No such channel exists");
+  }
+
+  const subscribed = await Subscription.findOne({
+    subscriber: user._id,
+    subscribeTo: subscribeTo._id,
+  });
+
+  if (subscribed) {
+    res
+      .status(201)
+      .json(new ApiResponse(201, "You have already subscribed this channel"));
+  }
+
+  const subscribeChannel = new Subscription({
+    subscribeTo: subscribeTo._id,
+    subscriber: user._id,
+  });
+  await subscribeChannel
+    .save()
+    .then(() => {
+      res
+        .status(201)
+        .json(new ApiResponse(201, `You have subscribed ${username}`));
+    })
+    .catch((err) => {
+      throw new ApiError(501, "error in subscribing user");
+    });
+});
+
+//clear
+const subscriptions = asyncHandler(async (req, res) => {
+  const user = req.user;
+  const videos = await Subscription.aggregate([
+    {
+      $match: {
+        subscriber: new mongoose.Types.ObjectId(user._id),
+      },
+    },
+    {
+      $lookup: {
+        from: "videos",
+        localField: "subscribeTo",
+        foreignField: "owner",
+        as: "Videos",
+      },
+    },
+    {
+      $addFields: {
+        username: { $arrayElemAt: ["$Videos.username",0] },
+      },
+    },
+    {
+      $project : {
+        username : 1,
+        Videos : 1,
+      }
+    }
+  ]);
+  if (videos.length === 0) {
+    res
+      .status(201)
+      .json(new ApiResponse(201, "you have not subscribed any channel yet"));
+  }
+  res
+    .status(201)
+    .json(new ApiResponse(201, videos, "videos fetched successfully"));
+});
 
 export {
   uploadVideo,
@@ -380,5 +464,7 @@ export {
   search,
   comment,
   getComments,
-  likedVideos
+  likedVideos,
+  subscribe,
+  subscriptions,
 };

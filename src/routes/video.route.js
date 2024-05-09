@@ -10,6 +10,8 @@ import {
   likeVideo,
   likedVideos,
   search,
+  subscribe,
+  subscriptions,
   unlikeVideo,
   uploadVideo,
   watchVideo,
@@ -33,6 +35,9 @@ router.route("/home").get(getVideos);
 router.route("/search").get(search);
 router.route("/comment").post(verifyJWT, comment);
 router.route("/get-comments").get(getComments);
-router.route("/liked-videos").get(verifyJWT,likedVideos);
+router.route("/liked-videos").get(verifyJWT, likedVideos);
+router.route("/subscribe").post(verifyJWT, subscribe);
+//unsubscribe is left
+router.route("/subscriptions").get(verifyJWT, subscriptions);
 
 export default router;
