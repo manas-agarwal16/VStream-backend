@@ -183,17 +183,17 @@ const verifyOTP = asyncHandler(async (req, res) => {
     coverImage: verifiedUser.coverImage,
   });
 
-  await user.save();
-  // .then(() => {
-  //   res
-  //     .status(201)
-  //     .json(new ApiResponse(201, "User registered successfully"));
-  // })
-  // .catch((err) => {
-  //   console.log(user);
-  //   throw new ApiError(501, "error in registering the user", err);
-  // });
-  res.status(201).json(new ApiResponse(201, "User registered successfully"));
+  await user
+    .save()
+    .then(() => {
+      res
+        .status(201)
+        .json(new ApiResponse(201, "User registered successfully"));
+    })
+    .catch((err) => {
+      console.log(user);
+      throw new ApiError(501, "error in registering the user", err);
+    });
 });
 
 //clear
