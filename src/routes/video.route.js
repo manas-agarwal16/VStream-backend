@@ -11,7 +11,9 @@ import {
   likedVideos,
   search,
   subscribe,
+  subscriptionChannels,
   subscriptions,
+  unSubscribe,
   unlikeVideo,
   uploadVideo,
   watchVideo,
@@ -37,7 +39,9 @@ router.route("/comment").post(verifyJWT, comment);
 router.route("/get-comments").get(getComments);
 router.route("/liked-videos").get(verifyJWT, likedVideos);
 router.route("/subscribe").post(verifyJWT, subscribe);
+router.route("/unsubscribe").post(verifyJWT,unSubscribe);
 //unsubscribe is left
-router.route("/subscriptions").get(verifyJWT, subscriptions);
+router.route("/subscriptions-videos").get(verifyJWT, subscriptions);
+router.route("/subscription-channels").get(verifyJWT,subscriptionChannels);
 
 export default router;

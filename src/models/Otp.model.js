@@ -44,6 +44,6 @@ const OtpVerifySchema = new mongoose.Schema({
   },
 });
 
-OtpVerifySchema.index({ createdAt: 1 }, { expireAfterSeconds: 120 });
+OtpVerifySchema.index({ createdAt: 1 }, { expireAfterSeconds: 900 });
 
 export const OtpModel = mongoose.model("OtpModel", OtpVerifySchema);

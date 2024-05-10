@@ -8,14 +8,12 @@ const subscriptionSchema = new mongoose.Schema(
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
         require: true,
-        unique: true,
       },
     subscribeTo: {
       // username is being subscribed
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       require: true,
-      unique: true,
     },
   },
   { timestamps: true }

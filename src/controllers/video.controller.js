@@ -242,6 +242,7 @@ const search = asyncHandler(async (req, res) => {
       { title: { $regex: search, $options: "i" } }, //regex for regular expression
       { videoTag: { $regex: search, $options: "i" } },
       { description: { $regex: search, $options: "i" } },
+      { username: { $regex: search, $options: "i" } },
     ],
   });
   if (videos.length === 0) {
@@ -417,6 +418,70 @@ const subscribe = asyncHandler(async (req, res) => {
 });
 
 //clear
+const unSubscribe = asyncHandler(async (req, res) => {
+  const user = req.user;
+  const { username } = req.body;
+  if (!username) {
+    throw new ApiError(401, "username is requred");
+  }
+
+  const userToUnsubscribe = await User.findOne({ username });
+  if (!userToUnsubscribe) {
+    throw new ApiError(401, "no such username found");
+  }
+
+  const deleteSubscription = await Subscription.findOneAndDelete({
+    subscriber: user._id,
+    subscribeTo: userToUnsubscribe._id,
+  });
+
+  console.log(deleteSubscription);
+  if (!deleteSubscription) {
+    throw new ApiError(501, "error in deleting subscription");
+  }
+  res
+    .status(201)
+    .json(new ApiResponse(201, `You have unsubscribed ${username}.`));
+});
+
+const subscriptionChannels = asyncHandler(async (req, res) => {
+  const user = req.user;
+  const channels = await Subscription.aggregate([
+    {
+      $match: {
+        subscriber: new mongoose.Types.ObjectId(user._id),
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "subscribeTo",
+        foreignField: "_id",
+        as: "username",
+      },
+    },
+    {
+      $unwind: "$username",
+    },
+    {
+      $group: {
+        _id: "$user_id",
+        subscriptions: { $push: "$username.username" },
+      },
+    },
+  ]);
+  console.log(channels);
+  if (channels.length === 0) {
+    res
+      .status(201)
+      .json(new ApiResponse(201, "U have not subscribed any channel yet"));
+  }
+  res
+    .status(201)
+    .json(new ApiResponse(201, channels, "subscriptions fetched successfully"));
+});
+
+//clear
 const subscriptions = asyncHandler(async (req, res) => {
   const user = req.user;
   const videos = await Subscription.aggregate([
@@ -435,15 +500,20 @@ const subscriptions = asyncHandler(async (req, res) => {
     },
     {
       $addFields: {
-        username: { $arrayElemAt: ["$Videos.username",0] },
+        username: { $arrayElemAt: ["$Videos.username", 0] },
       },
     },
     {
-      $project : {
-        username : 1,
-        Videos : 1,
-      }
-    }
+      $project: {
+        username: 1,
+        Videos: 1,
+      },
+    },
+    {//channel with no videos are excluded
+      $match: {
+        Videos: { $not: { $size: 0 } }, // Filter out documents where Videos array is empty
+      },
+    },
   ]);
   if (videos.length === 0) {
     res
@@ -467,4 +537,6 @@ export {
   likedVideos,
   subscribe,
   subscriptions,
+  unSubscribe,
+  subscriptionChannels,
 };

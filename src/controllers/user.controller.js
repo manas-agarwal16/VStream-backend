@@ -32,7 +32,7 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(409, "username already exists");
   }
 
-  existedUser = await OtpModel.findOne({ email }); //returns length
+  existedUser = await OtpModel.findOne({ email });
   if (existedUser) {
     throw new ApiError(409, "email already exists");
   }
@@ -152,6 +152,7 @@ const verifyOTP = asyncHandler(async (req, res) => {
   }
 
   let dbOTP = await OtpModel.findOne({ email: email });
+
   if (!dbOTP) {
     res
       .status(201)
@@ -182,16 +183,17 @@ const verifyOTP = asyncHandler(async (req, res) => {
     coverImage: verifiedUser.coverImage,
   });
 
-  await user
-    .save()
-    .then(() => {
-      res
-        .status(201)
-        .json(new ApiResponse(201, "User registered successfully"));
-    })
-    .catch((err) => {
-      throw new ApiError(501, "error in registering the user", err);
-    });
+  await user.save();
+  // .then(() => {
+  //   res
+  //     .status(201)
+  //     .json(new ApiResponse(201, "User registered successfully"));
+  // })
+  // .catch((err) => {
+  //   console.log(user);
+  //   throw new ApiError(501, "error in registering the user", err);
+  // });
+  res.status(201).json(new ApiResponse(201, "User registered successfully"));
 });
 
 //clear
@@ -689,10 +691,9 @@ const userProfile = asyncHandler(async (req, res) => {
     },
   ]);
 
-  if(channel.length > 0){
-    channel = channel[0]
-  }
-  else{
+  if (channel.length > 0) {
+    channel = channel[0];
+  } else {
     channel = "User hasn't posted anything yet";
   }
 
