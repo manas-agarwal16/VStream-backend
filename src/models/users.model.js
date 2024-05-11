@@ -12,7 +12,6 @@ const userSchema = new mongoose.Schema(
     username: { //channel name
       type: String,
       require: true,
-      unique: true,
       trim: true,
       index: true, // gives index , optimal for searching
     },
@@ -20,7 +19,6 @@ const userSchema = new mongoose.Schema(
       type: String,
       require: true,
       lowercase: true,
-      unique: true,
     },
     password: {
       type: String,
