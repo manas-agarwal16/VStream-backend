@@ -558,9 +558,6 @@ const userProfile = asyncHandler(async (req, res) => {
   console.log(username);
 
   const user = req.user;
-  if (!user) {
-    throw new ApiError(401, "unauthorization request");
-  }
 
   username = username.toLowerCase().trim();
   if (!username) {
@@ -702,6 +699,7 @@ const userProfile = asyncHandler(async (req, res) => {
     .json(new ApiResponse(201, { channel }, "user profile details"));
 });
 
+//clear
 const getWatchHistory = asyncHandler(async (req, res) => {
   const user = req.user;
 
@@ -720,15 +718,15 @@ const getWatchHistory = asyncHandler(async (req, res) => {
         from: "videos",
         localField: "watchHistory",
         foreignField: "_id",
-        as: "watchedVideos",
+        as: "video",
       },
     },
     {
-      $unwind: "$watchedVideos",
+      $unwind: "$video",
     },
     {
       $project: {
-        watchedVideos: 1,
+        video: 1,
       },
     },
   ]);

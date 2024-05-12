@@ -7,6 +7,7 @@ import {
   mergePlaylists,
   myPlaylists,
   removeFromPlaylist,
+  renamePLaylist,
   viewPlaylist,
 } from "../controllers/playlist.controller.js";
 const router = Router();
@@ -16,7 +17,8 @@ router.route("/add-to-playlist").post(verifyJWT, addToPlaylist);
 router.route("/remove-from-playlist").delete(verifyJWT, removeFromPlaylist);
 router.route("/delete-playlist").delete(verifyJWT, deletePlaylist);
 router.route("/my-playlists").get(verifyJWT, myPlaylists);
-router.route("/view-playlist").get(verifyJWT,viewPlaylist);
-router.route("/merge-playlists").post(verifyJWT,mergePlaylists);
+router.route("/view-playlist").get(verifyJWT, viewPlaylist);
+router.route("/merge-playlists").post(verifyJWT, mergePlaylists);
+router.route("/rename-playlist").post(verifyJWT, renamePLaylist);
 
 export default router;
