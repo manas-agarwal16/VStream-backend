@@ -19,6 +19,6 @@ router.route("/delete-playlist").delete(verifyJWT, deletePlaylist);
 router.route("/my-playlists").get(verifyJWT, myPlaylists);
 router.route("/view-playlist").get(verifyJWT, viewPlaylist);
 router.route("/merge-playlists").post(verifyJWT, mergePlaylists);
-router.route("/rename-playlist").post(verifyJWT, renamePLaylist);
+router.route("/rename-playlist").patch(verifyJWT, renamePLaylist);
 
 export default router;

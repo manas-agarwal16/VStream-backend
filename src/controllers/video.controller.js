@@ -269,16 +269,39 @@ const comment = asyncHandler(async (req, res) => {
   if (!user) {
     throw new ApiError(401, "Invalid request");
   }
-  const { content, video_id, parentComment_id } = req.body;
+  const { content, video_id, parentComment_id } = req.body; //parentComment_id null if video comment
   if (!content) {
     throw new ApiError(401, "Comment content is required");
   }
 
   if (!(video_id || parentComment_id)) {
-    throw new ApiError(401, "video_id or parentComment_id is required");
+    throw new ApiError(401, "video_id or parentCommentId is required");
+  }
+
+  if (video_id) {
+    try {
+      const exists = await Video.findById({ _id: video_id });
+      if (!exists) {
+        throw new ApiError(401, "Invalid video_id");
+      }
+    } catch (error) {
+      throw new ApiError(401, "Invalid video_id");
+    }
+  }
+
+  if (parentComment_id) {
+    try {
+      const commentIdExists = await Comment.findById({ _id: parentComment_id });
+      if (!commentIdExists) {
+        throw new ApiError(401, "Invalid parentCommentId");
+      }
+    } catch (error) {
+      throw new ApiError(401, "Invalid parentCommentId");
+    }
   }
 
   const newComment = new Comment({
+    user_id: user._id,
     content,
     video_id,
     parentComment_id,
@@ -293,6 +316,48 @@ const comment = asyncHandler(async (req, res) => {
     .catch((err) => {
       throw new ApiError(501, "error in saving comment", err);
     });
+});
+
+//clear
+const deleteComment = asyncHandler(async (req, res) => {
+  const user = req.user;
+
+  const { comment_id } = req.body;
+
+  console.log(comment_id);
+
+  if (!comment_id) {
+    throw new ApiError(401, "comment_id required");
+  }
+  try {
+    const exists = await Comment.findOne({
+      _id: comment_id,
+      user_id: user._id,
+    });
+    if (!exists) {
+      throw new ApiError(401, "Invalid request or comment_id");
+    }
+  } catch (error) {
+    throw new ApiError(401, "Invalid request or comment_id");
+  }
+
+  const childrenComments = await Comment.find({ parentComment_id: comment_id });
+
+  for (let i = 0; i < childrenComments.length; i++) {
+    const del = await Comment.findOneAndDelete({ _id: childrenComments[i] });
+    if (!del) {
+      throw new ApiError(501, "error in deleting child comment");
+    }
+  }
+
+  const deleteComment = await Comment.findOneAndDelete({
+    _id: comment_id,
+    user_id: user._id,
+  });
+  if (!deleteComment) {
+    throw new ApiError(501, "error in deleting comment");
+  }
+  res.status(201).json(new ApiResponse(201, "comment deleted successfully"));
 });
 
 //clear
@@ -377,7 +442,6 @@ const likedVideos = asyncHandler(async (req, res) => {
   }
 });
 
-
 export {
   uploadVideo,
   watchVideo,
@@ -388,5 +452,5 @@ export {
   comment,
   getComments,
   likedVideos,
- 
+  deleteComment,
 };

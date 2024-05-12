@@ -12,7 +12,7 @@ import {
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 router.route("/subscribe").post(verifyJWT, subscribe);
-router.route("/unsubscribe").post(verifyJWT, unSubscribe);
+router.route("/unsubscribe").delete(verifyJWT, unSubscribe);
 router.route("/subscriptions-videos").get(verifyJWT, subscriptions);
 router.route("/subscription-channels").get(verifyJWT, subscriptionChannels);
 

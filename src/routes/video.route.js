@@ -5,6 +5,7 @@ const router = Router();
 import upload from "../middlewares/multer.middleware.js";
 import {
   comment,
+  deleteComment,
   getComments,
   getVideos,
   likeVideo,
@@ -27,11 +28,12 @@ router.route("/upload-video").post(
 
 router.route("/watch-video").get(verifyJWT, watchVideo);
 router.route("/like-video").post(verifyJWT, likeVideo);
-router.route("/unlike-video").post(verifyJWT, unlikeVideo);
+router.route("/unlike-video").delete(verifyJWT, unlikeVideo);
 router.route("/get-videos").get(getVideos);
 router.route("/home").get(getVideos);
 router.route("/search").get(search);
 router.route("/comment").post(verifyJWT, comment);
+router.route("/delete-comment").delete(verifyJWT,deleteComment);
 router.route("/get-comments").get(getComments);
 router.route("/liked-videos").get(verifyJWT, likedVideos);
 
