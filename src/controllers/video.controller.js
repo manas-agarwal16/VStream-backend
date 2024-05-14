@@ -23,6 +23,11 @@ const uploadVideo = asyncHandler(async (req, res) => {
     throw new ApiError(401, "All fields require");
   }
 
+  const options = ["games","learning","music","comedy","news","serials","others"]
+  if(!options.includes(videoTag)){
+    throw new ApiError(401,"Invalid Video Tag");
+  }
+
   const videoFile = req.files?.videoFile[0].path;
   const thumbnail = req.files?.thumbnail[0].path;
 
@@ -237,9 +242,16 @@ const getVideos = asyncHandler(async (_, res) => {
 //clear , Remember : mention in the frontend that ur video title video tag and ur description helps user to find ur vidio through search.
 const search = asyncHandler(async (req, res) => {
   const { search } = req.query;
+  if (!search) {
+    return res
+      .status(201)
+      .json(
+        new ApiResponse(401, "search what you want to see 😊. Enjoy your day")
+      );
+  }
   const videos = await Video.find({
     $or: [
-      { title: { $regex: search, $options: "i" } }, //regex for regular expression
+      { title: { $regex: search, $options: "i" } }, //regex for regular expression, i for case insensitivity
       { videoTag: { $regex: search, $options: "i" } },
       { description: { $regex: search, $options: "i" } },
       { username: { $regex: search, $options: "i" } },
@@ -442,6 +454,126 @@ const likedVideos = asyncHandler(async (req, res) => {
   }
 });
 
+//clear
+const getVideosByTag = asyncHandler(async (req, res) => {
+  let { tag } = req.body;
+  if (!tag) {
+    throw new ApiError(401, "tag is required");
+  }
+
+  const videos = await Video.find({
+    $or: [
+      { videoTag: { $regex: tag, $options: "i" } },
+      { username: { $regex: tag, $options: "i" } },
+      { title: { $regex: tag, $options: "i" } },
+      { description: { $regex: tag, $options: "i" } },
+    ],
+  });
+
+  if (videos.length === 0) {
+    return res
+      .status(201)
+      .json(new ApiResponse(201, "Sorry we dont related videos with this tag"));
+  }
+  return res
+    .status(201)
+    .json(new ApiResponse(201, videos, "videos fetched successfully"));
+});
+
+const myVideos = asyncHandler(async (req, res) => {
+  const user = req.user;
+  const videos = await Video.aggregate([
+    {
+      $match: {
+        owner: new mongoose.Types.ObjectId(user._id),
+      },
+    },
+    {
+      $sort: { createdAt: -1 },
+    },
+  ]);
+  console.log(videos);
+  if (videos.length === 0) {
+    return res.status(201).json(new ApiResponse(201, "You haven't posted yet"));
+  }
+
+  return res
+    .status(201)
+    .json(new ApiResponse(201, videos, "videos fetched succesfully"));
+});
+
+//pending videoFile to be deleted from cloudinary
+const deleteVideo = asyncHandler(async (req, res) => {
+  const user = req.user;
+  const { video_id } = req.body;
+  if (!video_id) {
+    throw new ApiError(401, "video_id is required");
+  }
+
+  try {
+    const exists = await Video.findOne({ _id: video_id });
+    if (!exists) {
+      throw new ApiError(
+        401,
+        "Invalid video_id. no such video exists with this id"
+      );
+    }
+  } catch (error) {
+    throw new ApiError(
+      401,
+      "Invalid video_id. no such video exists with this id"
+    );
+  }
+
+  const video = await Video.findOne({ _id: video_id, owner: user._id });
+  if (!video) {
+    throw new ApiError(401, "Invalid request");
+  }
+
+  const deleteVideo = await Video.findOneAndDelete({
+    _id: video_id,
+    owner: user._id,
+  });
+  if (!deleteVideo) {
+    throw new ApiError(501, "error in deleting video");
+  }
+
+  res
+    .status(201)
+    .json(new ApiResponse(201, deleteVideo, "video deleted successfully"));
+});
+
+//here if thumbnail is updated then thumbnail to be delete.
+const updateVideo = asyncHandler(async (req, res) => {
+  const user = req.user;
+  const { video_id } = req.body;
+  if (!video_id) {
+    throw new ApiError(401, "video_id is required");
+  }
+
+  try {
+    const exists = await Video.findOne({ _id: video_id });
+    if (!exists) {
+      throw new ApiError(
+        401,
+        "Invalid video_id. no such video exists with this id"
+      );
+    }
+  } catch (error) {
+    throw new ApiError(
+      401,
+      "Invalid video_id. no such video exists with this id"
+    );
+  }
+
+  const video = await Video.findOne({_id : video_id , owner : user._id}); 
+  if(!video){
+    throw new ApiError(401,"invalid request");
+  }
+
+
+});
+
 export {
   uploadVideo,
   watchVideo,
@@ -453,4 +585,5 @@ export {
   getComments,
   likedVideos,
   deleteComment,
+  getVideosByTag,
 };

@@ -8,6 +8,7 @@ import {
   deleteComment,
   getComments,
   getVideos,
+  getVideosByTag,
   likeVideo,
   likedVideos,
   search,
@@ -36,6 +37,7 @@ router.route("/comment").post(verifyJWT, comment);
 router.route("/delete-comment").delete(verifyJWT,deleteComment);
 router.route("/get-comments").get(getComments);
 router.route("/liked-videos").get(verifyJWT, likedVideos);
+router.route("/get-videos-by-tagName").get(getVideosByTag);
 
 
 export default router;
