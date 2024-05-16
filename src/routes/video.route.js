@@ -6,13 +6,17 @@ import upload from "../middlewares/multer.middleware.js";
 import {
   comment,
   deleteComment,
+  deleteVideo,
   getComments,
   getVideos,
   getVideosByTag,
   likeVideo,
   likedVideos,
+  myVideos,
   search,
   unlikeVideo,
+  updateThumbnail,
+  updateVideoDetails,
   uploadVideo,
   watchVideo,
 } from "../controllers/video.controller.js";
@@ -34,10 +38,19 @@ router.route("/get-videos").get(getVideos);
 router.route("/home").get(getVideos);
 router.route("/search").get(search);
 router.route("/comment").post(verifyJWT, comment);
-router.route("/delete-comment").delete(verifyJWT,deleteComment);
+router.route("/delete-comment").delete(verifyJWT, deleteComment);
 router.route("/get-comments").get(getComments);
 router.route("/liked-videos").get(verifyJWT, likedVideos);
 router.route("/get-videos-by-tagName").get(getVideosByTag);
-
+router.route("/my-videos").get(verifyJWT, myVideos);
+router.route("/update-video-details").patch(verifyJWT, updateVideoDetails);
+router
+  .route("/update-thumbnail")
+  .patch(
+    verifyJWT,
+    upload.fields([{ name: "thumbnail", maxCount: 1 }]),
+    updateThumbnail
+  );
+router.route("/delete-video").delete(verifyJWT, deleteVideo);
 
 export default router;
