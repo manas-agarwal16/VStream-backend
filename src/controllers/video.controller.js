@@ -13,6 +13,7 @@ import { Subscription } from "../models/subscriptions.model.js";
 import { Comment } from "../models/comment.model.js";
 import mongoose from "mongoose";
 import { public_id } from "../utils/public_id.js";
+import { Song } from "../models/song.model.js";
 
 const tagOptions = [
   "games",
@@ -44,8 +45,14 @@ const uploadVideo = asyncHandler(async (req, res) => {
 
   // console.log(req.files);
   const videoFile = req.files?.videoFile[0].path;
+  if (videoFile.includes(".mp3")) {
+    throw new ApiError(
+      401,
+      "Video file is expected. Instead  received a song file"
+    );
+  }
   const thumbnail = req.files?.thumbnail[0]?.path;
-  console.log(videoFile , thumbnail);
+  console.log(videoFile, thumbnail);
 
   if (!videoFile) {
     throw new ApiError(401, "video file is require");
@@ -80,6 +87,44 @@ const uploadVideo = asyncHandler(async (req, res) => {
   await video.save().then(() => {
     res.status(201).json(new ApiResponse(201, "video uploaded successfully"));
   });
+});
+
+const uploadSong = asyncHandler(async (req, res) => {
+  const user = req.user;
+  const { songName } = req.body;
+  if (!songName) {
+    throw new ApiError(401, "songName is required");
+  }
+  console.log(req.files);
+  const songFile = req.files?.song[0].path;
+
+  if (!songFile) {
+    throw new ApiError(401, "songFile is required");
+  }
+  if (songFile.includes(".mp4")) {
+    throw new ApiError(401, "song file is expected.");
+  }
+
+  let upload;
+  try {
+    upload = await uploadOncloudinary(songFile);
+    if (!upload) {
+      throw new ApiError(501, "error in uploading song to cloudinary");
+    }
+  } catch (error) {
+    throw new ApiError(501, "error in uploading song to cloudinary");
+  }
+  console.log("here", upload.url);
+  const newSong = new Song({
+    songName,
+    username: user.username,
+    songFile: upload.url,
+  });
+
+  await newSong.save();
+  res
+    .status(201)
+    .json(new ApiResponse(201, newSong, "song uploaded successfully"));
 });
 
 //clear
@@ -560,7 +605,7 @@ const deleteVideo = asyncHandler(async (req, res) => {
       throw new ApiError(501, "error in deleting video from cloudinary");
     }
   } catch (error) {
-    throw new ApiError(501, "error in deleting video from cloudinary",error);
+    throw new ApiError(501, "error in deleting video from cloudinary", error);
   }
 
   try {
@@ -570,7 +615,11 @@ const deleteVideo = asyncHandler(async (req, res) => {
       throw new ApiError(501, "error in deleting thumbnail from cloudinary");
     }
   } catch (error) {
-    throw new ApiError(501, "error in deleting thumbnail from cloudinary",error);
+    throw new ApiError(
+      501,
+      "error in deleting thumbnail from cloudinary",
+      error
+    );
   }
 
   const deleteVideo = await Video.findOneAndDelete({
@@ -645,11 +694,11 @@ const updateThumbnail = asyncHandler(async (req, res) => {
   const { video_id } = req.body;
   const thumbnail = req.files?.thumbnail[0].path;
   console.log(thumbnail);
-  if(!video_id){
-    throw new ApiError(401,"video_id is required");
+  if (!video_id) {
+    throw new ApiError(401, "video_id is required");
   }
-  if(!thumbnail){
-    throw new ApiError(401,"thumbnail is requried");
+  if (!thumbnail) {
+    throw new ApiError(401, "thumbnail is requried");
   }
 
   try {
@@ -672,10 +721,10 @@ const updateThumbnail = asyncHandler(async (req, res) => {
     throw new ApiError("Invalid request to update the video");
   }
 
-  let thumbnailPublic_id
+  let thumbnailPublic_id;
   try {
     thumbnailPublic_id = public_id(video.thumbnail);
-    console.log(thumbnailPublic_id)
+    console.log(thumbnailPublic_id);
     const deleteOldThumbnail =
       await deleteFileFromCloudinary(thumbnailPublic_id);
     if (!deleteFileFromCloudinary) {
@@ -683,7 +732,11 @@ const updateThumbnail = asyncHandler(async (req, res) => {
     }
   } catch (error) {
     console.log(thumbnailPublic_id);
-    throw new ApiError(501, "error in deleting thumbnail from cloudinary",error);
+    throw new ApiError(
+      501,
+      "error in deleting thumbnail from cloudinary",
+      error
+    );
   }
 
   let thumbnailUpload;
@@ -732,5 +785,6 @@ export {
   myVideos,
   updateThumbnail,
   updateVideoDetails,
-  deleteVideo
+  deleteVideo,
+  uploadSong,
 };
