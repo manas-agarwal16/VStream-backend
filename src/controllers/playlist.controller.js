@@ -139,7 +139,7 @@ const removeFromPlaylist = asyncHandler(async (req, res) => {
   });
 
   if (!playlistExists) {
-    throw new ApiError(401, "on such playlist with this title exists");
+    throw new ApiError(401, "no such playlist with this title exists");
   }
 
   const videoInPlaylist = playlistExists.videos.includes(video_id);
@@ -262,7 +262,7 @@ const viewPlaylist = asyncHandler(async (req, res) => {
 
   const exist = await Playlist.findOne({ title: title, user_id: user._id });
   if (!exist) {
-    throw new ApiResponse(401, "no playlist with this title exist");
+    throw new ApiError(401, "no playlist with this title exist");
   }
   const videos = await Playlist.aggregate([
     {
@@ -289,9 +289,9 @@ const viewPlaylist = asyncHandler(async (req, res) => {
 //clear
 const mergePlaylists = asyncHandler(async (req, res) => {
   const user = req.user;
-  const { title1, title2, newPlaylistTitle, deleteOtherTwo } = req.body;
+  const { title1, title2, newTitle, deleteOtherTwo } = req.body;
 
-  if (!title1 || !title2 || !newPlaylistTitle) {
+  if (!title1 || !title2 || !newTitle) {
     throw new ApiError(401, "All titles required");
   }
 
@@ -311,13 +311,13 @@ const mergePlaylists = asyncHandler(async (req, res) => {
   }
 
   exists = await Playlist.findOne({
-    title: newPlaylistTitle,
+    title: newTitle,
     user_id: user._id,
   });
   if (exists) {
     throw new ApiError(
       401,
-      `Playlist with title ${newPlaylistTitle} already exists`
+      `Playlist with title ${newTitle} already exists`
     );
   }
 
@@ -360,7 +360,7 @@ const mergePlaylists = asyncHandler(async (req, res) => {
 
   const newPlaylist = new Playlist({
     user_id: user._id,
-    title: newPlaylistTitle,
+    title: newTitle,
     videos: mergedVideos,
   });
 

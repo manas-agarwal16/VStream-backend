@@ -17,7 +17,6 @@ import {
   unlikeVideo,
   updateThumbnail,
   updateVideoDetails,
-  uploadSong,
   uploadVideo,
   watchVideo,
 } from "../controllers/video.controller.js";
@@ -53,8 +52,6 @@ router
     updateThumbnail
   );
 router.route("/delete-video").delete(verifyJWT, deleteVideo);
-router
-  .route("/upload-song")
-  .post(verifyJWT, upload.fields([{ name: "song", maxCount: 1 }]), uploadSong);
+
 
 export default router;

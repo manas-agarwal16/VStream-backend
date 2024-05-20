@@ -5,10 +5,15 @@ const likeSchema = new mongoose.Schema({
         type : mongoose.Schema.Types.ObjectId,
         ref : "User",
     },
-    video_id : {
-        type : mongoose.Schema.Types.ObjectId,
-        ref : "Video",
+    model_id : {
+        type : mongoose.Types.ObjectId,
+        require : true,
+    },
+    modelName : {
+        type : String,
+        require : true,
+        enum : ["video","comment","song"],
     }
-})
+});
 
 export const Likes = mongoose.model("Likes",likeSchema);

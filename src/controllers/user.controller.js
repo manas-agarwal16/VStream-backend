@@ -659,15 +659,15 @@ const userProfile = asyncHandler(async (req, res) => {
     },
     {
       $lookup: {
-        from: "Subscription",
+        from: "subscriptions",
         localField: "_id",
-        foreignField: "channel",
+        foreignField: "subscribeTo",
         as: "subscribers",
       },
     },
     {
       $lookup: {
-        from: "Subscription",
+        from: "subscriptions",
         localField: "_id",
         foreignField: "subscriber",
         as: "subscribing",
