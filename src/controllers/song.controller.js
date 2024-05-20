@@ -53,6 +53,44 @@ const uploadSong = asyncHandler(async (req, res) => {
     .json(new ApiResponse(201, newSong, "song uploaded successfully"));
 });
 
+const deleteSong = asyncHandler(async (req, res) => {
+  const user = req.user;
+  const { song_id } = req.body;
+  if (!song_id) {
+    throw new ApiError(401, "song_id is required");
+  }
+
+  try {
+    const exists = await Song.findOne({
+      _id: song_id,
+      username: user.username,
+    });
+    if (!exists) {
+      throw new ApiError(
+        401,
+        "invalid song_id or invalid request to delete the song"
+      );
+    }
+  } catch (error) {
+    throw new ApiError(
+      401,
+      "invalid song_id or invalid request to delete the song"
+    );
+  }
+
+  const deleteSong = await Song.findOneAndDelete({
+    _id: song_id,
+    username: user.username,
+  });
+  if (!deleteSong) {
+    throw new ApiError(501, "error in deleting song");
+  }
+
+  res
+    .status(201)
+    .json(new ApiResponse(201, deleteSong, "song deleted successfully"));
+});
+
 const likeSong = asyncHandler(async (req, res) => {
   const user = req.user;
   const { song_id } = req.body;
@@ -166,10 +204,10 @@ const searchSongs = asyncHandler(async (req, res) => {
 
   const randomSongs = await Song.find();
   while (songs.length < 8) {
-     const index = Math.floor(Math.random() * randomSongs.length);
-     if(!songs.includes(randomSongs[index])){
-        songs.push(randomSongs[index]);
-     }
+    const index = Math.floor(Math.random() * randomSongs.length);
+    if (!songs.includes(randomSongs[index])) {
+      songs.push(randomSongs[index]);
+    }
   }
 
   if (songs.length === 0) {
@@ -188,4 +226,4 @@ const searchSongs = asyncHandler(async (req, res) => {
     .json(new ApiResponse(201, songs, "songs fetched successfully"));
 });
 
-export { uploadSong, getSongs, searchSongs, likeSong, unlikeSong };
+export { uploadSong, getSongs, searchSongs, likeSong, unlikeSong , deleteSong };
