@@ -5,6 +5,9 @@ Explanation.txt
 revision.js
 revision1.js
 revision2.js
+docker-compose.yaml
+dockerfile
+.dockerignore
 
 
 logs

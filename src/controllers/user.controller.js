@@ -9,7 +9,7 @@ import {
 import bcrypt from "bcrypt";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
-import { generateOTP, sendOTPThroughEmail } from "../utils/otp.js";
+import { generateOTP, sendOTPThroughEmail } from "../utils/OTP.js";
 import { OtpModel } from "../models/Otp.model.js";
 
 //clear

@@ -80,7 +80,7 @@ userSchema.methods.isCorrectPassword = async function (password) {
   }
 };
 
-//jwt.sign(payloads,secretKey,{eexpiresIn : expiryKey}) to generator token
+//jwt.sign(payloads,secretKey,{expiresIn : expiryKey}) to generator token
 userSchema.methods.generateAccessToken = async function () {
   return jwt.sign(
     {
