@@ -25,7 +25,7 @@ import songsRouter from "./routes/songs.routes.js"
 
 //Health API
 app.get("/", (req, res) => {
-  res.status(200).send("Welcome to the Streamly");
+  res.status(200).send("Welcome to the VStream");
 });
 
 app.use("/api/v1/users", userRouter);
