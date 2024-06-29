@@ -565,6 +565,11 @@ const userProfile = asyncHandler(async (req, res) => {
     throw new ApiError(401, "username required");
   }
 
+  const exists = await User.findOne({username : username});
+  if(!exists){
+    throw new ApiError(404,"no such username exists");
+  }
+
   let channel = await User.aggregate([
     {
       $match: {
@@ -664,78 +669,6 @@ const userProfile = asyncHandler(async (req, res) => {
       },
     },
   ]);
-
-  // // let channel = await User.aggregate([
-  //   {
-  //     $match: {
-  //       username: username,
-  //     },
-  //   },
-  //   {
-  //     //subscribers
-  //     $lookup: {
-  //       from: "subscriptions",
-  //       foreignField: "subscribeTo",
-  //       localField: "_id",
-  //       as: "subscribers",
-  //     },
-  //   },
-  //   {
-  //     $addFields: {
-  //       isSubscribed: {
-  //         $cond: {
-  //           if: { $in: [user._id, "$subscribers.subscriber"] },
-  //           then: true,
-  //           else: false,
-  //         },
-  //       },
-  //       subscribers: { $size: "$subscribers" },
-  //     },
-  //   },
-  //   {
-  //     $lookup: {
-  //       from: "subscriptions",
-  //       foreignField: "subscriber",
-  //       localField: "_id",
-  //       as: "subscribing",
-  //     },
-  //   },
-  //   {
-  //     $addFields: {
-  //       subscribing: { $size: "$subscribing" },
-  //     },
-  //   },
-  //   {
-  //     $lookup: {
-  //       from: "videos",
-  //       foreignField: "owner",
-  //       localField: "_id",
-  //       as: "AllVideos",
-  //     },
-  //   },
-  //   {
-  //     $unwind: "$AllVideos",
-  //   },
-  //   {
-  //     $sort: { "AllVideos.createdAt": 1 },
-  //   },
-  //   {
-  //     $group: {
-  //       _id : "$_id",
-  //       isSubscribed : 1,
-  //       subscribers : 1,
-  //       subscribing : 1,
-  //       username : 1,
-  //       fullName : 1,
-  //       avatar : 1,
-  //       coverImage : 1,
-  //       email : 1,
-  //       description : 1,
-  //       recentVideos :
-  //     },
-  //   },
-  // ]);
-  console.log("here", channel);
 
   if (channel.length > 0) {
     channel = channel[0];
