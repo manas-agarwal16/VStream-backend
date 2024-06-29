@@ -183,7 +183,12 @@ const verifyOTP = asyncHandler(async (req, res) => {
     avatar: verifiedUser.avatar,
     coverImage: verifiedUser.coverImage,
   });
+  
+  const deleteUserFromOtpModel = await OtpModel.findOneAndDelete({email : email});
 
+  if(!deleteFileFromCloudinary){
+    throw new ApiError(501,"error in deleting user from OTP model");
+  }
   await user
     .save()
     .then(() => {
