@@ -29,7 +29,6 @@ router.route("/register").post(
   registerUser
 );
 
-router.route("/register").post(registerUser);
 router.route("/verify-otp").post(verifyOTP);
 router.route("/resend-otp").get(resendOTP);
 router.route("/login").post(loginUser);
