@@ -575,150 +575,110 @@ const userProfile = asyncHandler(async (req, res) => {
     throw new ApiError(404,"no such username exists");
   }
 
-  // let channel = await User.aggregate([
-  //   {
-  //     $match: {
-  //       username: username,
-  //     },
-  //   },
-  //   {
-  //     $lookup: {
-  //       from: "videos",
-  //       localField: "_id",
-  //       foreignField: "owner",
-  //       as: "allVideos",
-  //     },
-  //   },
-  //   {
-  //     $addFields: {
-  //       numberOfVideos: { $size: "$allVideos" },
-  //     },
-  //   },
-  //   {
-  //     $unwind: "$allVideos",
-  //   },
-  //   {
-  //     $sort: { "allVideos.createdAt": -1 },
-  //   },
-  //   {
-  //     $group: {
-  //       _id: "$_id",
-  //       fullName: { $first: "$fullName" },
-  //       username: { $first: "$username" },
-  //       email: { $first: "$email" },
-  //       description: { $first: "$description" },
-  //       avatar: { $first: "$avatar" },
-  //       allVideos: { $push: "$allVideos" },
-  //       coverImage: { $first: "$coverImage" },
-  //       numberOfVideos: { $first: "$numberOfVideos" },
-  //       recentVideos: { $push: "$allVideos" },
-  //     },
-  //   },
-  //   {
-  //     $addFields: {
-  //       recentVideos: { $slice: ["$recentVideos", 4] },
-  //     },
-  //   },
-  //   {
-  //     $unwind: "$allVideos",
-  //   },
-  //   {
-  //     $sort: { "allVideos.views": -1 },
-  //   },
-  //   {
-  //     $group: {
-  //       _id: "$_id",
-  //       fullName: { $first: "$fullName" },
-  //       username: { $first: "$username" },
-  //       email: { $first: "$email" },
-  //       description: { $first: "$description" },
-  //       avatar: { $first: "$avatar" },
-  //       coverImage: { $first: "$coverImage" },
-  //       numberOfVideos: { $first: "$numberOfVideos" },
-  //       recentVideos: { $first: "$recentVideos" },
-  //       mostViewedVideos: { $push: "$allVideos" },
-  //     },
-  //   },
-  //   {
-  //     $addFields: {
-  //       mostViewedVideos: { $slice: ["$mostViewedVideos", 4] },
-  //     },
-  //   },
-  //   {
-  //     $lookup: {
-  //       from: "subscriptions",
-  //       localField: "_id",
-  //       foreignField: "subscribeTo",
-  //       as: "subscribers",
-  //     },
-  //   },
-  //   {
-  //     $lookup: {
-  //       from: "subscriptions",
-  //       localField: "_id",
-  //       foreignField: "subscriber",
-  //       as: "subscribing",
-  //     },
-  //   },
-  //   {
-  //     $addFields: {
-  //       subscribers: { $size: "$subscribers" },
-  //       subscribing: { $size: "$subscribing" },
-  //       isSubscribed: {
-  //         $cond: {
-  //           if: { $in: [user._id, "$subscribers.subscriber"] },
-  //           then: true,
-  //           else: false,
-  //         },
-  //       },
-  //     },
-  //   },
-  // ]);
-
   let channel = await User.aggregate([
     {
-      $match : {
-        username : username,
-      }
+      $match: {
+        username: username,
+      },
     },
     {
-      $lookup : {
-        from : "videos",
-        localField : "username",
-        foreignField : "username",
-        as : "usernameVideos",
-      }
+      $lookup: {
+        from: "videos",
+        localField: "_id",
+        foreignField: "owner",
+        as: "allVideos",
+      },
     },
     {
-      $addFields : {
-        numberOfVideos : {$size : "$usernameVideos"},
-      }
+      $addFields: {
+        numberOfVideos: { $size: "$allVideos" },
+      },
     },
     {
-      $unwind : "$usernameVideos",
+      $unwind: "$allVideos",
     },
     {
-      $sort : {
-        "usernameVideos.createdAt" : -1
-      }
+      $sort: { "allVideos.createdAt": -1 },
     },
     {
-      $group : {
-        _id : "$username",
-        email : {$first : "$email"}
-      }
-    }
+      $group: {
+        _id: "$_id",
+        fullName: { $first: "$fullName" },
+        username: { $first: "$username" },
+        email: { $first: "$email" },
+        description: { $first: "$description" },
+        avatar: { $first: "$avatar" },
+        allVideos: { $push: "$allVideos" },
+        coverImage: { $first: "$coverImage" },
+        numberOfVideos: { $first: "$numberOfVideos" },
+        recentVideos: { $push: "$allVideos" },
+      },
+    },
+    {
+      $addFields: {
+        recentVideos: { $slice: ["$recentVideos", 4] },
+      },
+    },
+    {
+      $unwind: "$allVideos",
+    },
+    {
+      $sort: { "allVideos.views": -1 },
+    },
+    {
+      $group: {
+        _id: "$_id",
+        fullName: { $first: "$fullName" },
+        username: { $first: "$username" },
+        email: { $first: "$email" },
+        description: { $first: "$description" },
+        avatar: { $first: "$avatar" },
+        coverImage: { $first: "$coverImage" },
+        numberOfVideos: { $first: "$numberOfVideos" },
+        recentVideos: { $first: "$recentVideos" },
+        mostViewedVideos: { $push: "$allVideos" },
+      },
+    },
+    {
+      $addFields: {
+        mostViewedVideos: { $slice: ["$mostViewedVideos", 4] },
+      },
+    },
+    {
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "subscribeTo",
+        as: "subscribers",
+      },
+    },
+    {
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "subscriber",
+        as: "subscribing",
+      },
+    },
+    {
+      $addFields: {
+        subscribers: { $size: "$subscribers" },
+        subscribing: { $size: "$subscribing" },
+        isSubscribed: {
+          $cond: {
+            if: { $in: [user._id, "$subscribers.subscriber"] },
+            then: true,
+            else: false,
+          },
+        },
+      },
+    },
   ]);
 
   console.log(channel);
-
-  // if (channel.length > 0) {
-  //   channel = channel[0];
-  // } else {
-  //   channel = "User hasn't posted anything yet";
-  // }
-  if(channel.lenght == 0){
-    channel = "User hasn't posted anything yet";
+  
+  if(channel.length > 0){
+    channel = channel[0];
   }
 
   return res
