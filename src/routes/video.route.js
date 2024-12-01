@@ -15,7 +15,7 @@ import {
   search,
   toggleCommentLike,
   toggleVideoLike,
-  updateThumbnail,
+  // updateThumbnail,
   updateVideoDetails,
   uploadVideo,
   watchVideo,
@@ -43,13 +43,13 @@ router.route("/get-comments").get(getComments);
 router.route("/liked-videos").get(verifyJWT, likedVideos);
 router.route("/my-videos").get(verifyJWT, myVideos);
 router.route("/update-video-details").patch(verifyJWT,upload.fields([{name : "thumbnail" , maxCount : 1} , {name : "videoFile" , maxCount : 1}]), updateVideoDetails);
-router
-  .route("/update-thumbnail")
-  .patch(
-    verifyJWT,
-    upload.fields([{ name: "thumbnail", maxCount: 1 }]),
-    updateThumbnail
-  );
+// router
+//   .route("/update-thumbnail")
+//   .patch(
+//     verifyJWT,
+//     upload.fields([{ name: "thumbnail", maxCount: 1 }]),
+//     updateThumbnail
+//   );
 router.route("/delete-video").delete(verifyJWT, deleteVideo);
 
 
