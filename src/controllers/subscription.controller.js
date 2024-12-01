@@ -7,12 +7,12 @@ import { Subscription } from "../models/subscriptions.model.js";
 import mongoose from "mongoose";
 
 //clear
-const subscribe = asyncHandler(async (req, res) => {
+const toggleSubscribe = asyncHandler(async (req, res) => {
   const user = req.user;
   const { username } = req.body; //frontend- username = channel
 
   if (!username) {
-    throw new ApiError(401, "video_id is required");
+    throw new ApiError(401, "userame/channelName is required");
   }
 
   const subscribeTo = await User.findOne({ username });
@@ -27,9 +27,19 @@ const subscribe = asyncHandler(async (req, res) => {
   });
 
   if (subscribed) {
+    const deleteSubscription = await Subscription.findOneAndDelete({
+      subscriber: user._id,
+      subscribeTo: subscribeTo._id,
+    });
     return res
       .status(201)
-      .json(new ApiResponse(201, "You have already subscribed this channel"));
+      .json(
+        new ApiResponse(
+          201,
+          deleteSubscription,
+          `You have unsubscribed this channel`
+        )
+      );
   }
 
   const subscribeChannel = new Subscription({
@@ -42,48 +52,17 @@ const subscribe = asyncHandler(async (req, res) => {
     .then(() => {
       res
         .status(201)
-        .json(new ApiResponse(201, `You have subscribed ${username}`));
+        .json(
+          new ApiResponse(
+            201,
+            subscribeChannel,
+            `You have subscribed ${username}`
+          )
+        );
     })
     .catch((err) => {
-      throw new ApiError(501, "error in subscribing user");
+      throw new ApiError(501, "error in toggling subscription");
     });
-});
-
-//clear
-const unSubscribe = asyncHandler(async (req, res) => {
-  const user = req.user;
-  const { username } = req.body;
-  if (!username) {
-    throw new ApiError(401, "username is requred");
-  }
-
-  const userToUnsubscribe = await User.findOne({ username });
-  if (!userToUnsubscribe) {
-    throw new ApiError(401, "no such username found");
-  }
-
-  const isSubscribed = await Subscription.findOne({
-    subscriber: user._id,
-    subscribeTo: userToUnsubscribe._id,
-  });
-  if (!isSubscribed) {
-    return res
-      .status(201)
-      .json(new ApiResponse(201, "u have not subscribed this channel already"));
-  }
-
-  const deleteSubscription = await Subscription.findOneAndDelete({
-    subscriber: user._id,
-    subscribeTo: userToUnsubscribe._id,
-  });
-
-  console.log(deleteSubscription);
-  if (!deleteSubscription) {
-    throw new ApiError(501, "error in deleting subscription");
-  }
-  res
-    .status(201)
-    .json(new ApiResponse(201, `You have unsubscribed ${username}.`));
 });
 
 //clear
@@ -124,7 +103,7 @@ const subscriptionChannels = asyncHandler(async (req, res) => {
     .json(new ApiResponse(201, channels, "subscriptions fetched successfully"));
 });
 
-//clear
+//clear jarurat lgi nai abhi
 const subscriptions = asyncHandler(async (req, res) => {
   const user = req.user;
   const videos = await Subscription.aggregate([
@@ -169,4 +148,4 @@ const subscriptions = asyncHandler(async (req, res) => {
     .json(new ApiResponse(201, videos, "videos fetched successfully"));
 });
 
-export { subscribe, subscriptions, unSubscribe, subscriptionChannels };
+export { toggleSubscribe, subscriptions, subscriptionChannels };

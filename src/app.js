@@ -21,9 +21,8 @@ import userRouter from "./routes/user.routes.js";
 import videoRouter from "./routes/video.route.js";
 import subscriptionRouter from "./routes/subscription.routes.js";
 import playlistRouter from "./routes/playlist.routes.js";
-import songsRouter from "./routes/songs.routes.js"
+import songsRouter from "./routes/songs.routes.js";
 
-//Health API
 app.get("/", (req, res) => {
   res.status(200).send("Welcome to the VStream");
 });

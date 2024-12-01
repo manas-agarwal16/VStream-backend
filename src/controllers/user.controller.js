@@ -575,6 +575,7 @@ const userProfile = asyncHandler(async (req, res) => {
     throw new ApiError(404,"no such username exists");
   }
 
+  //userDetails , userUploadedVideos , subscribers , subscribing
   let channel = await User.aggregate([
     {
       $match: {
@@ -598,7 +599,7 @@ const userProfile = asyncHandler(async (req, res) => {
       $unwind: "$allVideos",
     },
     {
-      $sort: { "allVideos.createdAt": -1 },
+      $sort: { "allVideos.updatedAt": -1 },
     },
     {
       $group: {
@@ -613,12 +614,12 @@ const userProfile = asyncHandler(async (req, res) => {
         numberOfVideos: { $first: "$numberOfVideos" },
         recentVideos: { $push: "$allVideos" },
       },
-    },
-    {
-      $addFields: {
-        recentVideos: { $slice: ["$recentVideos", 4] },
-      },
-    },
+    }, //comment on 30 Nov to get all uploaded videos by the user.
+    // {
+    //   $addFields: {
+    //     recentVideos: { $slice: ["$recentVideos", 4] },
+    //   },
+    // },
     {
       $unwind: "$allVideos",
     },

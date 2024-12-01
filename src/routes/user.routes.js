@@ -33,10 +33,10 @@ router.route("/verify-otp").post(verifyOTP);
 router.route("/resend-otp").get(resendOTP);
 router.route("/login").post(loginUser);
 router.route("/logout").get(verifyJWT, logoutUser);
-router.route("/refresh-access-token").post(refreshAccessToken);
+router.route("/refresh-access-token").get(refreshAccessToken);
 router
   .route("/update-avatar")
-  .post(
+  .patch(
     verifyJWT,
     upload.fields([{ name: "avatar", maxCount: 1 }]),
     updateAvatar
@@ -44,15 +44,15 @@ router
 
 router
   .route("/update-coverImage")
-  .post(
+  .patch(
     verifyJWT,
     upload.fields([{ name: "coverImage", maxCount: 1 }]),
     updateCoverImage
   );
 
-router.route("/remove-coverImage").post(verifyJWT, removeCoverImage);
+router.route("/remove-coverImage").delete(verifyJWT, removeCoverImage);
 
-router.route("/change-password").post(verifyJWT, changePassword);
+router.route("/change-password").patch(verifyJWT, changePassword);
 
 router.route("/user-profile/:username").get(verifyJWT , userProfile);
 

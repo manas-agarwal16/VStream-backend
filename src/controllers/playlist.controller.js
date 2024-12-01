@@ -61,7 +61,7 @@ const createPlaylist = asyncHandler(async (req, res) => {
   }
   return res
     .status(201)
-    .json(new ApiResponse(201, "Playlist created successfuilly"));
+    .json(new ApiResponse(201, update, "Playlist created successfuilly"));
 });
 
 //clear
@@ -117,7 +117,7 @@ const addToPlaylist = asyncHandler(async (req, res) => {
 //clear
 const removeFromPlaylist = asyncHandler(async (req, res) => {
   const user = req.user;
-  const { video_id, title } = req.body;
+  const { video_id, title } = req.query;
 
   if (!video_id || !title) {
     throw new ApiError(401, "video_id and playlist title both are required");
@@ -158,6 +158,7 @@ const removeFromPlaylist = asyncHandler(async (req, res) => {
       title: title,
       user_id: user._id,
     });
+
     if (!deletePlaylist) {
       throw new ApiError(501, "error in deleting playlist");
     }
@@ -186,7 +187,7 @@ const removeFromPlaylist = asyncHandler(async (req, res) => {
 //clear
 const deletePlaylist = asyncHandler(async (req, res) => {
   const user = req.user;
-  const { title } = req.body;
+  const { title } = req.query;
   if (!title) {
     throw new ApiError(401, "title is required");
   }
@@ -202,7 +203,11 @@ const deletePlaylist = asyncHandler(async (req, res) => {
   if (!deletePlaylist) {
     throw new ApiError(501, "error in deleting playlist");
   }
-  res.status(201).json(new ApiResponse(201, "playlist deleted successfully"));
+  res
+    .status(201)
+    .json(
+      new ApiResponse(201, deletePlaylist, "playlist deleted successfully")
+    );
 });
 
 //clear
@@ -315,10 +320,7 @@ const mergePlaylists = asyncHandler(async (req, res) => {
     user_id: user._id,
   });
   if (exists) {
-    throw new ApiError(
-      401,
-      `Playlist with title ${newTitle} already exists`
-    );
+    throw new ApiError(401, `Playlist with title ${newTitle} already exists`);
   }
 
   const data = await Playlist.aggregate([
@@ -405,9 +407,7 @@ const renamePLaylist = asyncHandler(async (req, res) => {
     throw new ApiError(401, "both titles required");
   }
 
-  const exists = await Playlist.findOne(
-    { title: title , user_id: user._id }
-  );
+  const exists = await Playlist.findOne({ title: title, user_id: user._id });
 
   if (!exists) {
     throw new ApiError(401, `playlist with title ${title} does not exists`);
@@ -436,5 +436,5 @@ export {
   myPlaylists,
   viewPlaylist,
   mergePlaylists,
-  renamePLaylist
+  renamePLaylist,
 };

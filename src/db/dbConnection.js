@@ -10,7 +10,7 @@ const DB = async () => {
     console.log(`MongoDB connected, DB HOST:  ${connectDB.connection.host}`);
     // in this we r not writing app.on , app.listen . this file is only for database connection.
   } catch (error) {
-    console.log("error", error);
+    console.log("DB error", error);
     throw error;
   }
 };

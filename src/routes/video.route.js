@@ -7,14 +7,14 @@ import {
   comment,
   deleteComment,
   deleteVideo,
+  editComment,
   getComments,
   getVideos,
-  getVideosByTag,
-  likeVideo,
   likedVideos,
   myVideos,
   search,
-  unlikeVideo,
+  toggleCommentLike,
+  toggleVideoLike,
   updateThumbnail,
   updateVideoDetails,
   uploadVideo,
@@ -31,19 +31,18 @@ router.route("/upload-video").post(
   uploadVideo
 );
 
-router.route("/watch-video").get(verifyJWT, watchVideo);
-router.route("/like-video").post(verifyJWT, likeVideo);
-router.route("/unlike-video").delete(verifyJWT, unlikeVideo);
+router.route("/watch-video/:video_id").get(verifyJWT, watchVideo);
+router.route("/toggle-video-like/:video_id").post(verifyJWT, toggleVideoLike);
 router.route("/get-videos").get(getVideos);
-router.route("/home").get(getVideos);
 router.route("/search").get(search);
 router.route("/comment").post(verifyJWT, comment);
-router.route("/delete-comment").delete(verifyJWT, deleteComment);
+router.route('/edit-comment').patch(verifyJWT , editComment);
+router.route("/toggle-comment-lke").post(verifyJWT , toggleCommentLike);
+router.route("/delete-comment/:comment_id").delete(verifyJWT, deleteComment);
 router.route("/get-comments").get(getComments);
 router.route("/liked-videos").get(verifyJWT, likedVideos);
-router.route("/get-videos-by-tagName").get(getVideosByTag);
 router.route("/my-videos").get(verifyJWT, myVideos);
-router.route("/update-video-details").patch(verifyJWT, updateVideoDetails);
+router.route("/update-video-details").patch(verifyJWT,upload.fields([{name : "thumbnail" , maxCount : 1} , {name : "videoFile" , maxCount : 1}]), updateVideoDetails);
 router
   .route("/update-thumbnail")
   .patch(
