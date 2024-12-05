@@ -18,7 +18,8 @@ import {
   verifyOTP,
   resendOTP,
   userProfile,
-  getWatchHistory
+  getWatchHistory,
+  getCurrentUser,
 } from "../controllers/user.controller.js";
 
 router.route("/register").post(
@@ -29,6 +30,7 @@ router.route("/register").post(
   registerUser
 );
 
+router.route(`/get-current-user`).get(getCurrentUser);
 router.route("/verify-otp").post(verifyOTP);
 router.route("/resend-otp").get(resendOTP);
 router.route("/login").post(loginUser);
@@ -54,8 +56,8 @@ router.route("/remove-coverImage").delete(verifyJWT, removeCoverImage);
 
 router.route("/change-password").patch(verifyJWT, changePassword);
 
-router.route("/user-profile/:username").get(verifyJWT , userProfile);
+router.route("/user-profile/:username").get(verifyJWT, userProfile);
 
-router.route("/watch-history").get(verifyJWT,getWatchHistory);
+router.route("/watch-history").get(verifyJWT, getWatchHistory);
 
 export default router;

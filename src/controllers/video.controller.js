@@ -13,7 +13,7 @@ import { Subscription } from "../models/subscriptions.model.js";
 import { Comment } from "../models/comment.model.js";
 import mongoose from "mongoose";
 import { public_id } from "../utils/public_id.js";
-import { Song } from "../models/song.model.js";
+import jwt from "jsonwebtoken";
 
 const tagOptions = [
   "games",
@@ -96,12 +96,31 @@ const uploadVideo = asyncHandler(async (req, res) => {
 
 //clear
 const watchVideo = asyncHandler(async (req, res) => {
-  const user = req.user;
-  if (!user) {
-    throw new ApiError(401, "Invalid request");
+  let user;
+
+  // console.log("watch video");
+
+  const token =
+    req.cookies?.accessToken ||
+    req.header("Authorization")?.replace("Bearer ", "");
+
+  // console.log("token : ", token);
+
+  if (token) {
+    const decodedToken = await jwt.verify(token, process.env.ACCESS_TOKEN_KEY);
+
+    if (!decodedToken) {
+      throw new ApiError(501, "error in decodeding token");
+    }
+
+    user = await User.findOne({ _id: decodedToken._id }).select(
+      "-password -refreshToken"
+    );
   }
 
   const { video_id } = req.params;
+  // console.log("video_id : ", video_id);
+
   if (!video_id) {
     throw new ApiError(401, "video_id is required");
   }
@@ -115,72 +134,122 @@ const watchVideo = asyncHandler(async (req, res) => {
     throw new ApiError(401, "invalid video file", error);
   }
 
-  const viewed = await Views.findOne({
-    user_id: user._id,
-    video_id: video._id,
-  });
+  // console.log("user : ", user);
+
+  let viewed;
+
+  if (user) {
+    viewed = await Views.findOne({
+      user_id: user._id,
+      video_id: video._id,
+    });
+  }
 
   let requiredVideo = video;
   let currentViews = video.views;
-  if (!viewed) {
-    currentViews += 1;
-    requiredVideo = await Video.findByIdAndUpdate(
-      { _id: video_id },
-      { views: currentViews },
-      { new: true }
-    );
+  if (user) {
+    if (!viewed) {
+      currentViews += 1;
+      requiredVideo = await Video.findByIdAndUpdate(
+        { _id: video_id },
+        { views: currentViews },
+        { new: true }
+      );
 
-    const viewVideo = new Views({
-      user_id: user._id,
-      video_id: video_id,
-    });
+      const viewVideo = new Views({
+        user_id: user._id,
+        video_id: video_id,
+      });
 
-    await viewVideo.save();
+      await viewVideo.save();
+    }
   }
 
   if (!requiredVideo) {
     throw new ApiError(501, "error in fetching video");
   }
 
-  const watchHistory = user.watchHistory;
-  watchHistory.unshift(requiredVideo._id);
-  if (watchHistory.length > 10) {
-    watchHistory.pop();
+  if (user) {
+    const watchHistory = user.watchHistory;
+    watchHistory.unshift(requiredVideo._id);
+    if (watchHistory.length > 10) {
+      watchHistory.pop();
+    }
+
+    const updateWatchHistory = await User.findByIdAndUpdate(
+      { _id: user._id },
+      { watchHistory: watchHistory },
+      { new: true }
+    );
+
+    if (!updateWatchHistory) {
+      throw new ApiError(501, "error in updating watch history");
+    }
   }
 
-  const updateWatchHistory = await User.findByIdAndUpdate(
-    { _id: user._id },
-    { watchHistory: watchHistory },
-    { new: true }
-  );
-
-  if (!updateWatchHistory) {
-    throw new ApiError(501, "error in updating watch history");
-  }
+  const ownerDetails = await User.findOne({
+    _id: video.owner,
+  });
 
   let likes = await Likes.find({ model_id: video_id, modelName: "video" });
   let subscribers = await Subscription.find({ subscribeTo: video.owner });
 
+  let isSubscribed = false,
+    isLiked = false;
+
+  if (user) {
+    isSubscribed = await Subscription.findOne({
+      subscribeTo: ownerDetails._id,
+      subscriber: user._id,
+    });
+    isLiked = await Likes.findOne({
+      model_id: video_id,
+      modelName: "video",
+      user_id: user._id,
+    });
+
+    if (isLiked) {
+      isLiked = true;
+    } else {
+      isLiked = false;
+    }
+
+    if (isSubscribed) {
+      isSubscribed = true;
+    } else isSubscribed = false;
+  }
   subscribers = subscribers.length;
   likes = likes.length;
+
+  video = video.toObject();
+
+  // console.log("video prev : " , video);
+
+  video = {
+    ...video,
+    avatar: ownerDetails.avatar,
+    likes,
+    subscribers,
+    isLiked,
+    isSubscribed,
+  };
+
+  // console.log("watch video : ", video);
+
   res
     .status(201)
-    .json(
-      new ApiResponse(
-        201,
-        { video: requiredVideo, likes: likes, subscribers: subscribers },
-        "video fetched successfully"
-      )
-    );
+    .json(new ApiResponse(201, video, "video fetched successfully"));
 });
 
 //clear
 const toggleVideoLike = asyncHandler(async (req, res) => {
+  // console.log("toggleVideolike");
   const user = req.user;
   if (!user) {
     throw new ApiError(401, "Invalid request");
   }
-  const { video_id } = req.params;
+  const { video_id } = req.body;
+  // console.log("video_id : ", video_id);
 
   if (!video_id) {
     throw new ApiError(401, "video_id is required");
@@ -205,7 +274,7 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
 
   if (!liked) {
     userLiked = true;
-    const likeVideo = new Likes({
+    const likeVideo = await new Likes({
       user_id: user._id,
       model_id: video_id,
       modelName: "video",
@@ -220,21 +289,24 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
     });
   }
 
+  // console.log("userLiked : " , userLiked);
+
   let videoLikes = await Likes.find({ model_id: video_id, modelName: "video" });
-  videoLikes = { video_id, likes: videoLikes.length, userLiked };
-  
+  videoLikes = { video_id, likes: videoLikes.length, isLiked: userLiked };
+
+  // console.log();
+
   res
     .status(201)
-    .json(
-      new ApiResponse(201, { videoLikes }, "Your like marked successfully")
-    );
+    .json(new ApiResponse(201, videoLikes, "Your like marked successfully"));
 });
 
 //clear
 const getVideos = asyncHandler(async (req, res) => {
-  const page = parseInt(req.query.page) || 1;
+  // console.log("here");
 
-  const limit = 8;
+  const page = parseInt(req.query.page) || 1;
+  const limit = 6;
   const skip = (page - 1) * limit;
 
   const paginationVideos = await Video.aggregate([
@@ -247,7 +319,17 @@ const getVideos = asyncHandler(async (req, res) => {
     {
       $limit: limit,
     },
+    {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "ownerDetails",
+      },
+    },
   ]);
+
+  // console.log("videos backend : ", paginationVideos);
 
   setTimeout(() => {
     res
@@ -305,6 +387,10 @@ const comment = asyncHandler(async (req, res) => {
     throw new ApiError(401, "Invalid request");
   }
   const { content, video_id, parentComment_id } = req.body; //parentComment_id null if video comment
+
+  // console.log("content : ", content);
+  console.log("video_id : ", video_id);
+
   if (!content) {
     throw new ApiError(401, "Comment content is required");
   }
@@ -315,7 +401,7 @@ const comment = asyncHandler(async (req, res) => {
 
   if (video_id) {
     try {
-      const exists = await Video.findById({ _id: video_id });
+      const exists = await Video.findById(video_id);
       if (!exists) {
         throw new ApiError(401, "Invalid video_id");
       }
@@ -335,28 +421,30 @@ const comment = asyncHandler(async (req, res) => {
     }
   }
 
+  // console.log("user  : ", user);
+
   const newComment = new Comment({
     user_id: user._id,
     content,
     video_id,
     parentComment_id,
   });
-  await newComment
-    .save()
-    .then(() => {
-      res
-        .status(201)
-        .json(
-          new ApiResponse(
-            201,
-            { comment: newComment },
-            "Your comment marked successfully"
-          )
-        );
-    })
-    .catch((err) => {
-      throw new ApiError(501, "error in saving comment", err);
-    });
+  await newComment.save();
+
+  let comment = newComment.toObject();
+  comment = {
+    ...comment,
+    isLiked: false,
+    likes: 0,
+    username: user.username,
+    avatar: user.avatar,
+  };
+
+  console.log("comment : ", comment);
+
+  res
+    .status(201)
+    .json(new ApiResponse(201, comment, "Your comment marked successfully"));
 });
 
 const editComment = asyncHandler(async (req, res) => {
@@ -390,50 +478,53 @@ const editComment = asyncHandler(async (req, res) => {
 
 const toggleCommentLike = asyncHandler(async (req, res) => {
   const user = req.user;
-  const { comment_id } = req.body;
-  if (!comment_id) {
+  if (!user) {
+    throw new ApiError(401, "Unauthorized Request");
+  }
+  let { oldComment } = req.body;
+  if (!oldComment) {
     throw new ApiError(401, "comment_id is required");
   }
 
   try {
-    const exists = await Comment.findOne({ _id: comment_id });
+    const exists = await Comment.findOne({ _id: oldComment._id });
     if (!exists) {
-      throw new ApiError(401, "Invalid comment_id");
+      throw new ApiError(401, "Invalid comment");
     }
   } catch (error) {
-    throw new ApiError(401, "invalid comment_id", error);
+    throw new ApiError(401, "invalid comment", error);
   }
 
-  const alreayLiked = await Likes.findOne({
-    user_id: user._id,
-    model_id: comment_id,
-    modelName: "comment",
-  });
-  if (alreayLiked) {
+  if (oldComment.isLiked) {
     await Likes.findOneAndDelete({
       user_id: user._id,
-      model_id: comment_id,
-      modelName: comment,
+      model_id: oldComment._id,
+      modelName: "comment",
+    });
+    oldComment.likes -= 1;
+    oldComment.isLiked = false;
+    res
+      .status(201)
+      .json(
+        new ApiResponse(201, oldComment, "Toggle comment like successfully")
+      );
+  } else {
+    const newLike = new Likes({
+      user_id: user._id,
+      model_id: oldComment._id,
+      modelName: "comment",
     });
 
-    return res
+    await newLike.save();
+
+    oldComment.isLiked = true;
+    oldComment.likes += 1;
+    res
       .status(201)
-      .json(new ApiResponse(201, "Toggle Comment Like Successfully!!!"));
+      .json(
+        new ApiResponse(201, oldComment, "Toggle comment like successfully")
+      );
   }
-
-  const newLike = new Likes({
-    user_id: user._id,
-    model_id: comment_id,
-    modelName: "comment",
-  });
-
-  await newLike.save();
-
-  return res
-    .status(201)
-    .json(
-      new ApiResponse(201, "your like on this comment marked successfully")
-    );
 });
 
 //clear
@@ -475,6 +566,9 @@ const deleteComment = asyncHandler(async (req, res) => {
   if (!deleteComment) {
     throw new ApiError(501, "error in deleting comment");
   }
+
+  console.log("deletedComment : ", deleteComment);
+
   res
     .status(201)
     .json(new ApiResponse(201, deleteComment, "comment deleted successfully"));
@@ -482,7 +576,29 @@ const deleteComment = asyncHandler(async (req, res) => {
 
 //clear
 const getComments = asyncHandler(async (req, res) => {
-  const { video_id, parentComment_id } = req.body;
+  let user;
+
+  const token =
+    req.cookies?.accessToken ||
+    req.header("Authorization")?.replace("Bearer ", "");
+
+  if (token) {
+    //collecting data from data by decoding it. .verify() function to decode token.
+    const decodedToken = await jwt.verify(token, process.env.ACCESS_TOKEN_KEY);
+
+    if (!decodedToken) {
+      throw new ApiError(501, "error in decodeding token");
+    }
+
+    user = await User.findOne({ _id: decodedToken._id }).select(
+      "-password -refreshToken"
+    );
+  }
+
+  let { video_id, parentComment_id } = req.query;
+
+  console.log("video_id : ", video_id);
+
   if (parentComment_id) {
     const childComments = await Comment.aggregate([
       {
@@ -504,7 +620,7 @@ const getComments = asyncHandler(async (req, res) => {
         },
       },
     ]);
-    console.log(childComments);
+    // console.log(childComments);
     if (childComments.length === 0) {
       res.status(201).json(new ApiResponse(201, "No comments yet"));
     } else {
@@ -519,15 +635,8 @@ const getComments = asyncHandler(async (req, res) => {
         );
     }
   } else if (video_id) {
-    let page = req.body;
-    page = Number(page);
-
-    const limit = 8;
-
-    const skip = (page - 1) * limit;
-
     // const videoComments = await Comment.find({ video_id });
-    const videoComments = await Comment.aggregate([
+    let videoComments = await Comment.aggregate([
       {
         $match: {
           video_id: new mongoose.Types.ObjectId(video_id),
@@ -535,12 +644,6 @@ const getComments = asyncHandler(async (req, res) => {
       },
       {
         $sort: { updatedAt: -1 },
-      },
-      {
-        $skip: skip,
-      },
-      {
-        $limit: limit,
       },
       {
         $lookup: {
@@ -551,22 +654,60 @@ const getComments = asyncHandler(async (req, res) => {
         },
       },
       {
+        $lookup: {
+          from: "users",
+          localField: "user_id",
+          foreignField: "_id",
+          as: "owner",
+        },
+      },
+      {
+        $unwind: "$owner",
+      },
+      {
         $addFields: {
           likes: { $size: "$likes" },
         },
       },
+      {
+        $project: {
+          username: "$owner.username",
+          avatar: "$owner.avatar",
+          likes: "$likes",
+          content: "$content",
+        },
+      },
     ]);
 
+    const totalComments = (await Comment.find({ video_id })).length;
+
+    // console.log("videoComments : ", videoComments);
+
+    videoComments = await Promise.all(
+      videoComments.map(async (comment) => {
+        const isLiked = await Likes.findOne({
+          user_id: user._id,
+          model_id: comment._id,
+          modelName: "comment",
+        });
+        return { ...comment, isLiked: !!isLiked }; // Add isLiked as a boolean
+      })
+    );
+
+    // videoComments = { ...videoComments, totalComments };
+
+    console.log("getcomments  : ", videoComments);
+    console.log("totalComments : ", totalComments);
+
     setTimeout(() => {
-      res
-        .status(201)
-        .json(
-          new ApiResponse(
-            201,
-            { comments: videoComments },
-            "comments fetched successfully"
-          )
-        );
+      res.status(201).json(
+        new ApiResponse(
+          201,
+          // { comments: videoComments },
+          { videoComments, totalComments },
+          "comments fetched successfully"
+        )
+      );
     }, 500);
   } else {
     throw new ApiError(401, "video_id or parentComment_id is required");

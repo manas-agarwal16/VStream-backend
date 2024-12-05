@@ -11,6 +11,8 @@ const toggleSubscribe = asyncHandler(async (req, res) => {
   const user = req.user;
   const { username } = req.body; //frontend- username = channel
 
+  console.log("username : ", username);
+
   if (!username) {
     throw new ApiError(401, "userame/channelName is required");
   }
@@ -33,13 +35,7 @@ const toggleSubscribe = asyncHandler(async (req, res) => {
     });
     return res
       .status(201)
-      .json(
-        new ApiResponse(
-          201,
-          deleteSubscription,
-          `You have unsubscribed this channel`
-        )
-      );
+      .json(new ApiResponse(201, false, `You have unsubscribed this channel`));
   }
 
   const subscribeChannel = new Subscription({
@@ -52,13 +48,7 @@ const toggleSubscribe = asyncHandler(async (req, res) => {
     .then(() => {
       res
         .status(201)
-        .json(
-          new ApiResponse(
-            201,
-            subscribeChannel,
-            `You have subscribed ${username}`
-          )
-        );
+        .json(new ApiResponse(201, true, `You have subscribed ${username}`));
     })
     .catch((err) => {
       throw new ApiError(501, "error in toggling subscription");

@@ -13,6 +13,75 @@ import { generateOTP, sendOTPThroughEmail } from "../utils/otp_generator.js";
 import { OtpModel } from "../models/Otp.model.js";
 import mongoose from "mongoose";
 
+const getCurrentUser = asyncHandler(async (req, res) => {
+  // console.log("getCurrentuseer");
+
+  // console.log("token in cookies : ", req.cookies?.accessToken);
+  let user;
+  try {
+    const token =
+      req.cookies?.accessToken ||
+      req.header("Authorization")?.replace("Bearer ", "");
+
+    // console.log("token : ", token);
+
+    if (!token) {
+      return res
+        .status(201)
+        .json(
+          new ApiResponse(
+            201,
+            { loginStatus: false, userData: {} },
+            "Unauthorized request!!"
+          )
+        );
+    }
+
+    //collecting data from data by decoding it. .verify() function to decode token.
+    const decodedToken = await jwt.verify(token, process.env.ACCESS_TOKEN_KEY);
+
+    // console.log("decodeToken : ", decodedToken);
+
+    if (!decodedToken) {
+      throw new ApiError(501, "error in decodeding token");
+    }
+
+    user = await User.findOne({ email: decodedToken.email }).select(
+      "-password -refreshToken"
+    );
+
+    if (!user) {
+      return res
+        .status(201)
+        .json(
+          new ApiResponse(
+            201,
+            { loginStatus: false, userData: {} },
+            "Unauthorized request!!"
+          )
+        );
+    }
+
+    // console.log("user : ", user);
+
+    // console.log("user : " , user);
+    
+    res
+      .status(201)
+      .json(
+        new ApiResponse(
+          201,
+          { loginStatus : true, userData : user },
+          "Current user details fetched successfully"
+        )
+      );
+  } catch (error) {
+    console.log("error : " , error);
+    
+    throw new ApiError(401, "invalid access token", error);
+  }
+});
+
 //clear
 const registerUser = asyncHandler(async (req, res) => {
   let { username, email, fullName, password, description } = req.body;
@@ -183,11 +252,13 @@ const verifyOTP = asyncHandler(async (req, res) => {
     avatar: verifiedUser.avatar,
     coverImage: verifiedUser.coverImage,
   });
-  
-  const deleteUserFromOtpModel = await OtpModel.findOneAndDelete({email : email});
 
-  if(!deleteFileFromCloudinary){
-    throw new ApiError(501,"error in deleting user from OTP model");
+  const deleteUserFromOtpModel = await OtpModel.findOneAndDelete({
+    email: email,
+  });
+
+  if (!deleteFileFromCloudinary) {
+    throw new ApiError(501, "error in deleting user from OTP model");
   }
   await user
     .save()
@@ -206,11 +277,13 @@ const verifyOTP = asyncHandler(async (req, res) => {
 const loginUser = asyncHandler(async (req, res) => {
   const { username, email, password } = req.body;
 
+  // console.log("login");
+
   if ((!username && !email) || !password) {
     throw new ApiError(400, "All fields are required.");
   }
 
-  const user = await User.findOne({
+  let user = await User.findOne({
     $or: [{ username }, { email }], //find on the basis of username or email.
   });
 
@@ -253,7 +326,7 @@ const loginUser = asyncHandler(async (req, res) => {
     .status(200)
     .cookie("accessToken", accessToken, options)
     .cookie("refreshToken", refreshToken, options)
-    .json(new ApiResponse(201, user._id, "user has logged in successfully"));
+    .json(new ApiResponse(201, user, "user has logged in successfully"));
 });
 
 //clear
@@ -570,9 +643,9 @@ const userProfile = asyncHandler(async (req, res) => {
     throw new ApiError(401, "username required");
   }
 
-  const exists = await User.findOne({username : username});
-  if(!exists){
-    throw new ApiError(404,"no such username exists");
+  const exists = await User.findOne({ username: username });
+  if (!exists) {
+    throw new ApiError(404, "no such username exists");
   }
 
   //userDetails , userUploadedVideos , subscribers , subscribing
@@ -677,8 +750,8 @@ const userProfile = asyncHandler(async (req, res) => {
   ]);
 
   console.log(channel);
-  
-  if(channel.length > 0){
+
+  if (channel.length > 0) {
     channel = channel[0];
   }
 
@@ -733,6 +806,7 @@ const getWatchHistory = asyncHandler(async (req, res) => {
 });
 
 export {
+  getCurrentUser,
   registerUser,
   resendOTP,
   verifyOTP,
