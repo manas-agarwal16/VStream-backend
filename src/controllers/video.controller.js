@@ -648,7 +648,7 @@ const getComments = asyncHandler(async (req, res) => {
       {
         $lookup: {
           from: "likes",
-          localField: "_id",
+          localField: "video_id",
           foreignField: "model_id",
           as: "likes",
         },
@@ -686,7 +686,7 @@ const getComments = asyncHandler(async (req, res) => {
     videoComments = await Promise.all(
       videoComments.map(async (comment) => {
         const isLiked = await Likes.findOne({
-          user_id: user._id,
+          user_id: user?._id,
           model_id: comment._id,
           modelName: "comment",
         });
