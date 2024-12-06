@@ -4,10 +4,11 @@ class ApiError extends Error {
     // errors = [] for handling multiple errors if there.
     super(message), //Error class constructor expects only one argument i.e message
       (this.message = message),
+      console.log("apiError :", this.message);
       (this.statusCode = statusCode),
       (this.errors = errors),
-      this.success = false // error, dont proceed
+      (this.success = false); // error, dont proceed
   }
 }
 
-export {ApiError}
+export { ApiError };
