@@ -4,7 +4,8 @@ const generateOTP = () => {
   let otp = "";
   let array = [];
   for (let i = 0; i < 4; i++) {
-    const num = Math.floor(Math.random() * 10);
+    let num = Math.floor(Math.random() * 10);
+    if (num == 0) num = 1;
     otp += num;
   }
   otp = Number(otp);
@@ -13,9 +14,9 @@ const generateOTP = () => {
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
-  host : "smtp.gmail.com",
-  port : 587,
-  secure : false,
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false,
   auth: {
     user: process.env.NODEMAILER_EMAIL,
     pass: process.env.NODEMAILER_PASSWORD,

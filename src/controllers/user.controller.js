@@ -43,7 +43,10 @@ const getCurrentUser = asyncHandler(async (req, res) => {
     // console.log("decodeToken : ", decodedToken);
 
     if (!decodedToken) {
-      throw new ApiError(501, "error in decodeding token");
+      // throw new ApiError(501, "error in decodeding token");
+      return res
+        .status(501)
+        .json(new ApiResponse(501, "", "error in decoding token"));
     }
 
     user = await User.findOne({ email: decodedToken.email }).select(
@@ -78,7 +81,10 @@ const getCurrentUser = asyncHandler(async (req, res) => {
   } catch (error) {
     console.log("error : ", error);
 
-    throw new ApiError(401, "invalid access token", error);
+    // throw new ApiError(401, "invalid access token", error);
+    return res
+      .status(401)
+      .json(new ApiResponse(401, "", "invalid access token"));
   }
 });
 
@@ -89,7 +95,9 @@ const registerUser = asyncHandler(async (req, res) => {
   console.log(username, " ", email, " ", fullName, " ", password);
 
   if (!fullName || !username || !email || !password) {
-    throw new ApiError(400, "All fields are required");
+    return res
+      .status(400)
+      .json(new ApiResponse(400, "", "All fields are required"));
   }
 
   email = email.toLowerCase().trim();
@@ -101,33 +109,37 @@ const registerUser = asyncHandler(async (req, res) => {
 
   if (existedUser) {
     if (existedUser.email === email) {
-      // console.log("here baby");
-
       return res
         .status(401)
-        .json(new ApiResponse(401, "", "email already exists"));
-      // throw new ApiError(409 , "Email already exists");
+        .json(new ApiResponse(401, "", "Email already exists"));
     }
     if (existedUser.username === username) {
-      throw new ApiError(409, "Username already exists");
+      return res
+        .status(409)
+        .json(new ApiResponse(409, "", "Username already exists"));
     }
   }
 
   existedUser = await OtpModel.findOne({ email });
   if (existedUser) {
-    console.log("heree baby");
-
-    return res.status(409).json(new ApiResponse(409, "email already exists"));
+    return res
+      .status(409)
+      .json(new ApiResponse(409, "", "Email already exists"));
   }
   existedUser = await OtpModel.findOne({ username });
   if (existedUser) {
-    throw new ApiError(409, "username already exists");
+    return res
+      .status(409)
+      .json(new ApiResponse(409, "", "Username already exists"));
   }
 
-  //file upload.
+  console.log("req.files : " , req.files);
+  // File upload.
   let avatarLocalPath;
   if (req.files && req.files.avatar && req.files.avatar[0]) {
     avatarLocalPath = req.files.avatar[0].path;
+    console.log("avatarLocalPath  : " , avatarLocalPath);
+    
   }
 
   let cloudinaryAvatarURL;
@@ -136,9 +148,14 @@ const registerUser = asyncHandler(async (req, res) => {
     cloudinaryAvatarURL = await uploadOncloudinary(avatarLocalPath);
 
     if (!cloudinaryAvatarURL) {
-      throw new ApiError(500, "avatar not saved try again");
+      return res
+        .status(501)
+        .json(new ApiResponse(501, "", "Avatar not saved, try again"));
     }
   }
+
+  console.log("cloudinaryAvatarURL : " , cloudinaryAvatarURL);
+  
 
   const OTP = generateOTP();
 
@@ -154,10 +171,12 @@ const registerUser = asyncHandler(async (req, res) => {
   await pendingUser
     .save()
     .then(() => {
-      console.log("user saved to db successfully");
+      console.log("User saved to database successfully");
     })
     .catch((err) => {
-      throw new ApiError(501, "error in saving user to db");
+      return res
+        .status(501)
+        .json(new ApiResponse(501, "", "Error in saving user to database"));
     });
 
   await sendOTPThroughEmail(email, OTP)
@@ -167,13 +186,16 @@ const registerUser = asyncHandler(async (req, res) => {
         .json(
           new ApiResponse(
             201,
+            "",
             `An OTP has been sent to ${email} for verification`
           )
         );
     })
     .catch((error) => {
       console.error("Error sending OTP through email:", error);
-      throw new ApiError(501, `Error sending OTP to the email : ${email}`);
+      return res
+        .status(501)
+        .json(new ApiResponse(501, "", "Error sending OTP. Please try again!"));
     });
 });
 
@@ -212,10 +234,12 @@ const resendOTP = asyncHandler(async (req, res) => {
 
 //clear
 const verifyOTP = asyncHandler(async (req, res) => {
-  const { OTP, email } = req.body;
+  let { OTP, email } = req.body;
   if (!OTP || !email) {
     throw new ApiError(401, "OTP and email required");
   }
+
+  OTP = Number(OTP);
 
   let dbOTP = await OtpModel.findOne({ email: email });
 
@@ -228,8 +252,9 @@ const verifyOTP = asyncHandler(async (req, res) => {
   dbOTP = dbOTP.OTP;
 
   if (dbOTP !== OTP) {
-    resendOTP({ email });
-    throw new ApiError(401, "Wrong OTP. Try again");
+    return res
+      .status(401)
+      .json(new ApiResponse(401, { success: false }, "Invalid OTP"));
   }
 
   await OtpModel.findOneAndUpdate({ email: email }, { $set: { OTP: null } });
@@ -260,9 +285,17 @@ const verifyOTP = asyncHandler(async (req, res) => {
   await user
     .save()
     .then(() => {
-      res
-        .status(201)
-        .json(new ApiResponse(201, user, "User registered successfully"));
+      res.status(201).json(
+        new ApiResponse(
+          201,
+          {
+            success: true,
+            email: verifiedUser.email,
+            password: verifiedUser.password,
+          },
+          "User registered successfully"
+        )
+      );
     })
     .catch((err) => {
       console.log(user);

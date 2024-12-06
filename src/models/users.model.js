@@ -9,7 +9,8 @@ const userSchema = new mongoose.Schema(
       type: String,
       require: true,
     },
-    username: { //channel name
+    username: {
+      //channel name
       type: String,
       require: true,
       trim: true,
@@ -25,8 +26,8 @@ const userSchema = new mongoose.Schema(
       require: true,
     },
     description: {
-      type : String,
-      default : null,
+      type: String,
+      default: null,
     },
     watchHistory: [
       {
@@ -40,14 +41,14 @@ const userSchema = new mongoose.Schema(
     },
     avatar: {
       type: String, // cloudinary (or AWS) url stored in db,
-      require: true,
+      default: 'https://cdn.pixabay.com/photo/2017/03/05/08/38/character-2117975_1280.png',
     },
     coverImage: {
       type: String,
     },
-    premium : {
-      type : Boolean,
-      default : false
+    premium: {
+      type: Boolean,
+      default: false,
     },
   },
   { timestamps: true }

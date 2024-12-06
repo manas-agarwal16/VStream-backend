@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import path from "path"
 
 const app = express();
 
@@ -14,7 +15,8 @@ app.use(
 app.use(cookieParser());
 app.use(express.json({ limit: "10kb" })); //for incoming requests in jdon format
 app.use(express.urlencoded({ extended: true })); // for incoming requests in url
-app.use(express.static("Public")); //serves static files like html, css, js in public directory
+app.use(express.static("public")); //serves static files like html, css, js in public 
+// app.use(express.static(path.join(__dirname, "public")));
 
 //route import
 import userRouter from "./routes/user.routes.js";
