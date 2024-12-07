@@ -98,19 +98,15 @@ const uploadVideo = asyncHandler(async (req, res) => {
 const watchVideo = asyncHandler(async (req, res) => {
   let user;
 
-  // console.log("watch video");
-
   const token =
     req.cookies?.accessToken ||
     req.header("Authorization")?.replace("Bearer ", "");
-
-  // console.log("token : ", token);
 
   if (token) {
     const decodedToken = await jwt.verify(token, process.env.ACCESS_TOKEN_KEY);
 
     if (!decodedToken) {
-      throw new ApiError(501, "error in decodeding token");
+      return res.status(501).json(new ApiResponse(501, "", "Error in decoding token"));
     }
 
     user = await User.findOne({ _id: decodedToken._id }).select(
@@ -119,22 +115,20 @@ const watchVideo = asyncHandler(async (req, res) => {
   }
 
   const { video_id } = req.params;
-  // console.log("video_id : ", video_id);
 
   if (!video_id) {
-    throw new ApiError(401, "video_id is required");
+    return res.status(401).json(new ApiResponse(401, "", "video_id is required"));
   }
+  
   let video;
   try {
     video = await Video.findById({ _id: video_id });
     if (!video) {
-      throw new ApiError(401, "invalid video file");
+      return res.status(401).json(new ApiResponse(401, "", "Invalid video file"));
     }
   } catch (error) {
-    throw new ApiError(401, "invalid video file", error);
+    return res.status(401).json(new ApiResponse(401, "", "Invalid video file", error));
   }
-
-  // console.log("user : ", user);
 
   let viewed;
 
@@ -166,7 +160,7 @@ const watchVideo = asyncHandler(async (req, res) => {
   }
 
   if (!requiredVideo) {
-    throw new ApiError(501, "error in fetching video");
+    return res.status(501).json(new ApiResponse(501, "", "Error in fetching video"));
   }
 
   if (user) {
@@ -183,7 +177,7 @@ const watchVideo = asyncHandler(async (req, res) => {
     );
 
     if (!updateWatchHistory) {
-      throw new ApiError(501, "error in updating watch history");
+      return res.status(501).json(new ApiResponse(501, "", "Error in updating watch history"));
     }
   }
 
@@ -208,23 +202,14 @@ const watchVideo = asyncHandler(async (req, res) => {
       user_id: user._id,
     });
 
-    if (isLiked) {
-      isLiked = true;
-    } else {
-      isLiked = false;
-    }
-
-    if (isSubscribed) {
-      isSubscribed = true;
-    } else isSubscribed = false;
+    isLiked = isLiked ? true : false;
+    isSubscribed = isSubscribed ? true : false;
   }
+
   subscribers = subscribers.length;
   likes = likes.length;
 
   video = video.toObject();
-
-  // console.log("video prev : " , video);
-
   video = {
     ...video,
     avatar: ownerDetails.avatar,
@@ -234,34 +219,32 @@ const watchVideo = asyncHandler(async (req, res) => {
     isSubscribed,
   };
 
-  // console.log("watch video : ", video);
-
-  res
+  return res
     .status(201)
-    .json(new ApiResponse(201, video, "video fetched successfully"));
+    .json(new ApiResponse(201, video, "Video fetched successfully"));
 });
+
 
 //clear
 const toggleVideoLike = asyncHandler(async (req, res) => {
-  // console.log("toggleVideolike");
   const user = req.user;
   if (!user) {
-    throw new ApiError(401, "Invalid request");
+    return res.status(401).json(new ApiResponse(401, "", "Invalid request"));
   }
+
   const { video_id } = req.body;
-  // console.log("video_id : ", video_id);
 
   if (!video_id) {
-    throw new ApiError(401, "video_id is required");
+    return res.status(401).json(new ApiResponse(401, "", "video_id is required"));
   }
 
   try {
     const exists = await Video.findOne({ _id: video_id });
     if (!exists) {
-      throw new ApiError(401, "invalid video_id");
+      return res.status(401).json(new ApiResponse(401, "", "Invalid video_id"));
     }
   } catch (error) {
-    throw new ApiError(401, "invalid video_id");
+    return res.status(401).json(new ApiResponse(401, "", "Invalid video_id"));
   }
 
   const liked = await Likes.findOne({
@@ -289,17 +272,14 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
     });
   }
 
-  // console.log("userLiked : " , userLiked);
-
   let videoLikes = await Likes.find({ model_id: video_id, modelName: "video" });
   videoLikes = { video_id, likes: videoLikes.length, isLiked: userLiked };
 
-  // console.log();
-
-  res
+  return res
     .status(201)
     .json(new ApiResponse(201, videoLikes, "Your like marked successfully"));
 });
+
 
 //clear
 const getVideos = asyncHandler(async (req, res) => {
@@ -384,7 +364,7 @@ const search = asyncHandler(async (req, res) => {
 const comment = asyncHandler(async (req, res) => {
   const user = req.user;
   if (!user) {
-    throw new ApiError(401, "Invalid request");
+    return res.status(401).json(new ApiResponse(401, "", "Invalid request"));
   }
   const { content, video_id, parentComment_id } = req.body; //parentComment_id null if video comment
 
@@ -392,21 +372,21 @@ const comment = asyncHandler(async (req, res) => {
   console.log("video_id : ", video_id);
 
   if (!content) {
-    throw new ApiError(401, "Comment content is required");
+    return res.status(401).json(new ApiResponse(401, "", "Comment content is required"));
   }
 
   if (!(video_id || parentComment_id)) {
-    throw new ApiError(401, "video_id or parentCommentId is required");
+    return res.status(401).json(new ApiResponse(401, "", "video_id or parentCommentId is required"));
   }
 
   if (video_id) {
     try {
       const exists = await Video.findById(video_id);
       if (!exists) {
-        throw new ApiError(401, "Invalid video_id");
+        return res.status(401).json(new ApiResponse(401, "", "Invalid video_id"));
       }
     } catch (error) {
-      throw new ApiError(401, "Invalid video_id");
+      return res.status(401).json(new ApiResponse(401, "", "Invalid video_id"));
     }
   }
 
@@ -414,10 +394,10 @@ const comment = asyncHandler(async (req, res) => {
     try {
       const commentIdExists = await Comment.findById({ _id: parentComment_id });
       if (!commentIdExists) {
-        throw new ApiError(401, "Invalid parentCommentId");
+        return res.status(401).json(new ApiResponse(401, "", "Invalid parentCommentId"));
       }
     } catch (error) {
-      throw new ApiError(401, "Invalid parentCommentId");
+      return res.status(401).json(new ApiResponse(401, "", "Invalid parentCommentId"));
     }
   }
 
@@ -442,16 +422,17 @@ const comment = asyncHandler(async (req, res) => {
 
   console.log("comment : ", comment);
 
-  res
+  return res
     .status(201)
     .json(new ApiResponse(201, comment, "Your comment marked successfully"));
 });
+
 
 const editComment = asyncHandler(async (req, res) => {
   const user = req.user;
   const { comment, comment_id } = req.body;
   if (!comment || !comment_id) {
-    throw new ApiError(501, "comment and comment_id are required");
+    return res.status(501).json(new ApiResponse(501, "", "comment and comment_id are required"));
   }
   try {
     const updatedComment = await Comment.findOneAndUpdate(
@@ -461,7 +442,7 @@ const editComment = asyncHandler(async (req, res) => {
     );
 
     if (updatedComment) {
-      res
+      return res
         .status(200)
         .json(
           new ApiResponse(
@@ -472,27 +453,27 @@ const editComment = asyncHandler(async (req, res) => {
         );
     }
   } catch (error) {
-    throw new ApiError(501, "Error in updating comment");
+    return res.status(501).json(new ApiResponse(501, "", "Error in updating comment"));
   }
 });
 
 const toggleCommentLike = asyncHandler(async (req, res) => {
   const user = req.user;
   if (!user) {
-    throw new ApiError(401, "Unauthorized Request");
+    return res.status(401).json(new ApiResponse(401, "", "Unauthorized Request"));
   }
   let { oldComment } = req.body;
   if (!oldComment) {
-    throw new ApiError(401, "comment_id is required");
+    return res.status(401).json(new ApiResponse(401, "", "comment_id is required"));
   }
 
   try {
     const exists = await Comment.findOne({ _id: oldComment._id });
     if (!exists) {
-      throw new ApiError(401, "Invalid comment");
+      return res.status(401).json(new ApiResponse(401, "", "Invalid comment"));
     }
   } catch (error) {
-    throw new ApiError(401, "invalid comment", error);
+    return res.status(401).json(new ApiResponse(401, "", "invalid comment"));
   }
 
   if (oldComment.isLiked) {
@@ -503,7 +484,7 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
     });
     oldComment.likes -= 1;
     oldComment.isLiked = false;
-    res
+    return res
       .status(201)
       .json(
         new ApiResponse(201, oldComment, "Toggle comment like successfully")
@@ -519,7 +500,7 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
 
     oldComment.isLiked = true;
     oldComment.likes += 1;
-    res
+    return res
       .status(201)
       .json(
         new ApiResponse(201, oldComment, "Toggle comment like successfully")
@@ -536,7 +517,7 @@ const deleteComment = asyncHandler(async (req, res) => {
   console.log(comment_id);
 
   if (!comment_id) {
-    throw new ApiError(401, "comment_id required");
+    return res.status(401).json(new ApiResponse(401, "", "comment_id required"));
   }
   try {
     const exists = await Comment.findOne({
@@ -544,10 +525,10 @@ const deleteComment = asyncHandler(async (req, res) => {
       user_id: user._id,
     });
     if (!exists) {
-      throw new ApiError(401, "Invalid request or comment_id");
+      return res.status(401).json(new ApiResponse(401, "", "Invalid request or comment_id"));
     }
   } catch (error) {
-    throw new ApiError(401, "Invalid request or comment_id");
+    return res.status(401).json(new ApiResponse(401, "", "Invalid request or comment_id"));
   }
 
   const childrenComments = await Comment.find({ parentComment_id: comment_id });
@@ -555,7 +536,7 @@ const deleteComment = asyncHandler(async (req, res) => {
   for (let i = 0; i < childrenComments.length; i++) {
     const del = await Comment.findOneAndDelete({ _id: childrenComments[i] });
     if (!del) {
-      throw new ApiError(501, "error in deleting child comment");
+      return res.status(501).json(new ApiResponse(501, "", "error in deleting child comment"));
     }
   }
 
@@ -564,12 +545,12 @@ const deleteComment = asyncHandler(async (req, res) => {
     user_id: user._id,
   });
   if (!deleteComment) {
-    throw new ApiError(501, "error in deleting comment");
+    return res.status(501).json(new ApiResponse(501, "", "error in deleting comment"));
   }
 
   console.log("deletedComment : ", deleteComment);
 
-  res
+  return res
     .status(201)
     .json(new ApiResponse(201, deleteComment, "comment deleted successfully"));
 });
@@ -587,7 +568,7 @@ const getComments = asyncHandler(async (req, res) => {
     const decodedToken = await jwt.verify(token, process.env.ACCESS_TOKEN_KEY);
 
     if (!decodedToken) {
-      throw new ApiError(501, "error in decodeding token");
+      return res.status(501).json(new ApiResponse(501, "", "error in decoding token"));
     }
 
     user = await User.findOne({ _id: decodedToken._id }).select(
@@ -620,11 +601,10 @@ const getComments = asyncHandler(async (req, res) => {
         },
       },
     ]);
-    // console.log(childComments);
     if (childComments.length === 0) {
-      res.status(201).json(new ApiResponse(201, "No comments yet"));
+      return res.status(201).json(new ApiResponse(201, "", "No comments yet"));
     } else {
-      res
+      return res
         .status(201)
         .json(
           new ApiResponse(
@@ -635,7 +615,6 @@ const getComments = asyncHandler(async (req, res) => {
         );
     }
   } else if (video_id) {
-    // const videoComments = await Comment.find({ video_id });
     let videoComments = await Comment.aggregate([
       {
         $match: {
@@ -681,8 +660,6 @@ const getComments = asyncHandler(async (req, res) => {
 
     const totalComments = (await Comment.find({ video_id })).length;
 
-    // console.log("videoComments : ", videoComments);
-
     videoComments = await Promise.all(
       videoComments.map(async (comment) => {
         const isLiked = await Likes.findOne({
@@ -694,23 +671,20 @@ const getComments = asyncHandler(async (req, res) => {
       })
     );
 
-    // videoComments = { ...videoComments, totalComments };
-
     console.log("getcomments  : ", videoComments);
     console.log("totalComments : ", totalComments);
 
     setTimeout(() => {
-      res.status(201).json(
+      return res.status(201).json(
         new ApiResponse(
           201,
-          // { comments: videoComments },
           { videoComments, totalComments },
           "comments fetched successfully"
         )
       );
     }, 500);
   } else {
-    throw new ApiError(401, "video_id or parentComment_id is required");
+    return res.status(401).json(new ApiResponse(401, "", "video_id or parentComment_id is required"));
   }
 });
 
@@ -718,7 +692,7 @@ const getComments = asyncHandler(async (req, res) => {
 const likedVideos = asyncHandler(async (req, res) => {
   const user = req.user;
   if (!user) {
-    throw new ApiError(401, "Invalid request");
+    return res.status(401).json(new ApiResponse(401, "", "Invalid request"));
   }
   const videos = await Likes.aggregate([
     {
@@ -745,17 +719,18 @@ const likedVideos = asyncHandler(async (req, res) => {
     },
   ]);
   if (videos.length === 0) {
-    res
+    return res
       .status(201)
-      .json(new ApiResponse(201, "You haven't liked any videos yet"));
+      .json(new ApiResponse(201, "", "You haven't liked any videos yet"));
   } else {
-    res
+    return res
       .status(201)
       .json(
         new ApiResponse(201, videos[0], "liked videos fetched successfully")
       );
   }
 });
+
 
 //clear
 const myVideos = asyncHandler(async (req, res) => {
@@ -772,12 +747,12 @@ const myVideos = asyncHandler(async (req, res) => {
   ]);
   console.log(videos);
   if (videos.length === 0) {
-    return res.status(201).json(new ApiResponse(201, "You haven't posted yet"));
+    return res.status(201).json(new ApiResponse(201, "", "You haven't posted yet"));
   }
 
   return res
     .status(201)
-    .json(new ApiResponse(201, videos, "videos fetched succesfully"));
+    .json(new ApiResponse(201, videos, "videos fetched successfully"));
 });
 
 //clear
@@ -785,27 +760,25 @@ const deleteVideo = asyncHandler(async (req, res) => {
   const user = req.user;
   const { video_id } = req.body;
   if (!video_id) {
-    throw new ApiError(401, "video_id is required");
+    return res.status(401).json(new ApiResponse(401, "", "video_id is required"));
   }
 
   try {
     const exists = await Video.findOne({ _id: video_id });
     if (!exists) {
-      throw new ApiError(
-        401,
-        "Invalid video_id. no such video exists with this id"
+      return res.status(401).json(
+        new ApiResponse(401, "", "Invalid video_id. no such video exists with this id")
       );
     }
   } catch (error) {
-    throw new ApiError(
-      401,
-      "Invalid video_id. no such video exists with this id"
+    return res.status(401).json(
+      new ApiResponse(401, "", "Invalid video_id. no such video exists with this id")
     );
   }
 
   const video = await Video.findOne({ _id: video_id, owner: user._id });
   if (!video) {
-    throw new ApiError(401, "Invalid request");
+    return res.status(401).json(new ApiResponse(401, "", "Invalid request"));
   }
 
   const videoFile = video.videoFile;
@@ -817,25 +790,21 @@ const deleteVideo = asyncHandler(async (req, res) => {
   try {
     const deleteVideoCloudinary =
       await deleteFileFromCloudinary(videoFilePublic_id);
-    if (!deleteFileFromCloudinary) {
-      throw new ApiError(501, "error in deleting video from cloudinary");
+    if (!deleteVideoCloudinary) {
+      return res.status(501).json(new ApiResponse(501, "", "Error in deleting video from cloudinary"));
     }
   } catch (error) {
-    throw new ApiError(501, "error in deleting video from cloudinary", error);
+    return res.status(501).json(new ApiResponse(501, "", "Error in deleting video from cloudinary"));
   }
 
   try {
     const deleteThumbnailCloudinary =
       await deleteFileFromCloudinary(thumbnailPublic_id);
     if (!deleteThumbnailCloudinary) {
-      throw new ApiError(501, "error in deleting thumbnail from cloudinary");
+      return res.status(501).json(new ApiResponse(501, "", "Error in deleting thumbnail from cloudinary"));
     }
   } catch (error) {
-    throw new ApiError(
-      501,
-      "error in deleting thumbnail from cloudinary",
-      error
-    );
+    return res.status(501).json(new ApiResponse(501, "", "Error in deleting thumbnail from cloudinary"));
   }
 
   const deleteVideo = await Video.findOneAndDelete({
@@ -843,12 +812,12 @@ const deleteVideo = asyncHandler(async (req, res) => {
     owner: user._id,
   });
   if (!deleteVideo) {
-    throw new ApiError(501, "error in deleting video");
+    return res.status(501).json(new ApiResponse(501, "", "Error in deleting video"));
   }
 
-  res
+  return res
     .status(201)
-    .json(new ApiResponse(201, deleteVideo, "video deleted successfully"));
+    .json(new ApiResponse(201, deleteVideo, "Video deleted successfully"));
 });
 
 //clear
@@ -859,45 +828,39 @@ const updateVideoDetails = asyncHandler(async (req, res) => {
   let videoFile = req.files?.videoFile[0].path;
 
   if (!thumbnail || !videoFile) {
-    throw new ApiError(
-      401,
-      "All fields required. Thumbnail / videoFile are missing"
-    );
+    return res.status(401).json(new ApiResponse(401, "", "All fields required. Thumbnail / videoFile are missing"));
   }
   if (!video_id) {
-    throw new ApiError(401, "video_id is required");
+    return res.status(401).json(new ApiResponse(401, "", "video_id is required"));
   }
 
   if (!title || !description || !videoTag) {
-    throw new ApiError(401, "all fields required");
+    return res.status(401).json(new ApiResponse(401, "", "All fields required"));
   }
 
   videoTag = videoTag.toLowerCase();
 
   if (!tagOptions.includes(videoTag)) {
-    throw new ApiError(401, "invalid videoTag");
+    return res.status(401).json(new ApiResponse(401, "", "Invalid videoTag"));
   }
 
   try {
     const video = await Video.findOne({ _id: video_id, owner: user._id });
     if (!video) {
-      throw new ApiError(401, "Invalid request or video_id does not exists");
+      return res.status(401).json(new ApiResponse(401, "", "Invalid request or video_id does not exist"));
     }
   } catch (error) {
-    throw new ApiError(
-      401,
-      "Invalid video_id. no such video exists with this id"
-    );
+    return res.status(401).json(new ApiResponse(401, "", "Invalid video_id. no such video exists with this id"));
   }
 
   const uploadVideo = await uploadOncloudinary(videoFile);
   if (!uploadVideo) {
-    throw new ApiError(501, "error in uploading video to cloudinary");
+    return res.status(501).json(new ApiResponse(501, "", "Error in uploading video to cloudinary"));
   }
 
   const uploadThumbnail = await uploadOncloudinary(thumbnail);
   if (!uploadThumbnail) {
-    throw new ApiError(501, "error in uploading thumbnail");
+    return res.status(501).json(new ApiResponse(501, "", "Error in uploading thumbnail"));
   }
 
   const updateVideo = await Video.findOneAndUpdate(
@@ -913,12 +876,12 @@ const updateVideoDetails = asyncHandler(async (req, res) => {
   );
 
   if (!updateVideo) {
-    throw new ApiError(501, "error in updating video");
+    return res.status(501).json(new ApiResponse(501, "", "Error in updating video"));
   }
 
-  res
+  return res
     .status(201)
-    .json(new ApiResponse(201, updateVideo, "video updated successfully"));
+    .json(new ApiResponse(201, updateVideo, "Video updated successfully"));
 });
 
 export {

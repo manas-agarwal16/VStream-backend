@@ -133,13 +133,12 @@ const registerUser = asyncHandler(async (req, res) => {
       .json(new ApiResponse(409, "", "Username already exists"));
   }
 
-  console.log("req.files : " , req.files);
+  console.log("req.files : ", req.files);
   // File upload.
   let avatarLocalPath;
   if (req.files && req.files.avatar && req.files.avatar[0]) {
     avatarLocalPath = req.files.avatar[0].path;
-    console.log("avatarLocalPath  : " , avatarLocalPath);
-    
+    console.log("avatarLocalPath  : ", avatarLocalPath);
   }
 
   let cloudinaryAvatarURL;
@@ -154,8 +153,7 @@ const registerUser = asyncHandler(async (req, res) => {
     }
   }
 
-  console.log("cloudinaryAvatarURL : " , cloudinaryAvatarURL);
-  
+  console.log("cloudinaryAvatarURL : ", cloudinaryAvatarURL);
 
   const OTP = generateOTP();
 
@@ -201,7 +199,9 @@ const registerUser = asyncHandler(async (req, res) => {
 
 //clear
 const resendOTP = asyncHandler(async (req, res) => {
-  const { email } = req.body;
+  const { email } = req.params;
+  console.log("email : " , email);
+  
 
   const OTP = generateOTP();
 
@@ -210,10 +210,15 @@ const resendOTP = asyncHandler(async (req, res) => {
     { OTP: OTP }
   );
   if (!updateOTP) {
-    throw new ApiError(
-      401,
-      "Email not found or expired. Try Registering again"
-    );
+    return res
+      .status(401)
+      .json(
+        new ApiResponse(
+          401,
+          "",
+          "Email not found or expired. Try Registering again"
+        )
+      );
   }
 
   await sendOTPThroughEmail(email, OTP)
@@ -223,12 +228,15 @@ const resendOTP = asyncHandler(async (req, res) => {
         .json(
           new ApiResponse(
             201,
-            "An OTP has been send to your email for verification"
+            "",
+            "An OTP has been sent to your email for verification"
           )
         );
     })
     .catch((err) => {
-      throw new ApiError(401, "Error in sending email", err);
+      return res
+        .status(401)
+        .json(new ApiResponse(401, "", "Error in sending email"));
     });
 });
 
@@ -236,7 +244,9 @@ const resendOTP = asyncHandler(async (req, res) => {
 const verifyOTP = asyncHandler(async (req, res) => {
   let { OTP, email } = req.body;
   if (!OTP || !email) {
-    throw new ApiError(401, "OTP and email required");
+    return res
+      .status(401)
+      .json(new ApiResponse(401, "", "OTP and email required"));
   }
 
   OTP = Number(OTP);
@@ -244,9 +254,9 @@ const verifyOTP = asyncHandler(async (req, res) => {
   let dbOTP = await OtpModel.findOne({ email: email });
 
   if (!dbOTP) {
-    res
+    return res
       .status(201)
-      .json(new ApiResponse(201, "OTP has expired. Please register again"));
+      .json(new ApiResponse(201, "", "OTP has expired. Please register again"));
   }
 
   dbOTP = dbOTP.OTP;
@@ -280,7 +290,9 @@ const verifyOTP = asyncHandler(async (req, res) => {
   });
 
   if (!deleteFileFromCloudinary) {
-    throw new ApiError(501, "error in deleting user from OTP model");
+    return res
+      .status(501)
+      .json(new ApiResponse(501, "", "Error in deleting user from OTP model"));
   }
   await user
     .save()
@@ -299,52 +311,70 @@ const verifyOTP = asyncHandler(async (req, res) => {
     })
     .catch((err) => {
       console.log(user);
-      throw new ApiError(501, "error in registering the user", err);
+      return res
+        .status(501)
+        .json(new ApiResponse(501, "", "Error in registering the user"));
     });
 });
 
 //clear
 const loginUser = asyncHandler(async (req, res) => {
-  const { username, email, password } = req.body;
+  const { email, password } = req.body;
 
-  // console.log("login");
+  console.log(email , " ", password);
+  
+  console.log("login");
 
-  if ((!username && !email) || !password) {
-    throw new ApiError(400, "All fields are required.");
+  if (!email || !password) {
+    return res
+      .status(400)
+      .json(new ApiResponse(400, "", "All fields are required."));
   }
 
   let user = await User.findOne({
-    $or: [{ username }, { email }], //find on the basis of username or email.
+    $or: [{ username : email }, { email : email }], //find on the basis of username or email.
   });
 
   if (!user) {
-    throw new ApiError(400, "username or email is not registered yet");
+    return res
+      .status(400)
+      .json(
+        new ApiResponse(400, "", "Username or email is not registered yet")
+      );
   }
 
   const validPassword = await user.isCorrectPassword(password);
   if (!validPassword) {
-    throw new ApiError(400, "wrong password!!! try again");
+    return res
+      .status(400)
+      .json(new ApiResponse(400, "", "Wrong password! Try again"));
   }
 
   const accessToken = await user.generateAccessToken();
   const refreshToken = await user.generateRefreshToken();
 
   if (!accessToken) {
-    throw new ApiError(500, "error in creating access token");
+    return res
+      .status(500)
+      .json(new ApiResponse(500, "", "Error in creating access token"));
   }
   if (!refreshToken) {
-    throw new ApiError(500, "error in creating refresh token");
+    return res
+      .status(500)
+      .json(new ApiResponse(500, "", "Error in creating refresh token"));
   }
 
   const setRefreshToken = await User.findOneAndUpdate(
     {
-      $or: [{ username }, { email }], //find on the basis of username or email.
+      $or: [{ username : email }, { email : email }], //find on the basis of username or email.
     },
     { refreshToken: refreshToken }
   );
 
   if (!setRefreshToken) {
-    throw new ApiError(501, "error in updating refresh Token");
+    return res
+      .status(501)
+      .json(new ApiResponse(501, "", "Error in updating refresh token"));
   }
 
   const options = {
@@ -356,7 +386,7 @@ const loginUser = asyncHandler(async (req, res) => {
     .status(200)
     .cookie("accessToken", accessToken, options)
     .cookie("refreshToken", refreshToken, options)
-    .json(new ApiResponse(201, user, "user has logged in successfully"));
+    .json(new ApiResponse(201, user, "User has logged in successfully"));
 });
 
 //clear
@@ -372,7 +402,9 @@ const logoutUser = asyncHandler(async (req, res) => {
   );
 
   if (!updateRefreshToken) {
-    throw new ApiError(501, "error in updating refresh token");
+    return res
+      .status(501)
+      .json(new ApiResponse(501, "", "Error in updating refresh token"));
   }
 
   const options = {
@@ -393,12 +425,13 @@ const logoutUser = asyncHandler(async (req, res) => {
     );
 });
 
+
 //clear
 const changePassword = asyncHandler(async (req, res) => {
   let { oldPassword, newPassword } = req.body;
 
   if (!newPassword || !oldPassword) {
-    throw new ApiError(401, "enter your passwords");
+    return res.status(401).json(new ApiResponse(401, "", "Enter your passwords"));
   }
   const user = req.user;
 
@@ -407,32 +440,34 @@ const changePassword = asyncHandler(async (req, res) => {
   const correctPassword = await userWithPassword.isCorrectPassword(oldPassword);
 
   if (!correctPassword) {
-    throw new ApiError(401, "wrong old password");
+    return res.status(401).json(new ApiResponse(401, "", "Wrong old password"));
   }
 
   const newHashPassword = await bcrypt.hash(newPassword, 10);
 
   if (!newHashPassword) {
-    throw new ApiError(501, "error in hashing password");
+    return res.status(501).json(new ApiResponse(501, "", "Error in hashing password"));
   }
+
   const updatePassword = await User.findByIdAndUpdate(
     { _id: user._id },
     { password: newHashPassword }
   );
   if (!updatePassword) {
-    throw new ApiError(501, "error in updating password");
+    return res.status(501).json(new ApiResponse(501, "", "Error in updating password"));
   }
 
-  res
+  return res
     .status(201)
     .json(
       new ApiResponse(
         201,
         { username: user.username },
-        "your password has being changed successfully!!"
+        "Your password has been changed successfully!!"
       )
     );
 });
+
 
 //clear
 const updateAvatar = asyncHandler(async (req, res) => {
@@ -443,17 +478,17 @@ const updateAvatar = asyncHandler(async (req, res) => {
   }
 
   if (!avatarLocalPath) {
-    throw new ApiError(401, "avatar is required!!!");
+    return res.status(401).json(new ApiResponse(401, "", "Avatar is required!!!"));
   }
 
   const newAvatar = await uploadOncloudinary(avatarLocalPath);
 
   if (!newAvatar) {
-    throw new ApiError(501, "error in uploading new avatar to cloudinary.");
+    return res.status(501).json(new ApiResponse(501, "", "Error in uploading new avatar to Cloudinary."));
   }
   const user = req.user;
 
-  //deleting oldAvatar from cloudinary: 'http://res.cloudinary.com/dgrm75hbj/image/upload/v1713352206/b4itkxym6dcywvwqvuwu.png', this provided url on file upload by cloudinary contains the unique public_id of a file which is required to delete a specific file , extracting that public_id below;
+  // Deleting old avatar from Cloudinary
   const oldAvatar = user.avatar;
   let oldAvatarPublic_id = oldAvatar.replace(
     "http://res.cloudinary.com/dgrm75hbj/image/upload/",
@@ -461,14 +496,13 @@ const updateAvatar = asyncHandler(async (req, res) => {
   );
 
   const array = oldAvatarPublic_id.split("/"); //string to array based on "/";
-
   oldAvatarPublic_id = array[1].replace(".png", "");
   console.log(oldAvatarPublic_id);
 
   const deletionResult = await deleteFileFromCloudinary(oldAvatarPublic_id);
 
   if (!deletionResult) {
-    throw new ApiResponse(501, "error in deleting old avatar from clouinary!!");
+    return res.status(501).json(new ApiResponse(501, "", "Error in deleting old avatar from Cloudinary!!"));
   }
 
   const updateAvatar = await User.findByIdAndUpdate(
@@ -477,13 +511,14 @@ const updateAvatar = asyncHandler(async (req, res) => {
   );
 
   if (!updateAvatar) {
-    throw new ApiError(501, "error in updating avatar");
+    return res.status(501).json(new ApiResponse(501, "", "Error in updating avatar"));
   }
 
   return res
     .status(201)
-    .json(new ApiResponse(201, user, "avatar has been updated successfully."));
+    .json(new ApiResponse(201, user, "Avatar has been updated successfully."));
 });
+
 
 //clear
 const refreshAccessToken = asyncHandler(async (req, res) => {
@@ -491,39 +526,39 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     req.cookies?.refreshToken || req.body.refreshToken;
 
   if (!incomingRefreshToken) {
-    throw new ApiError(401, "unauthorized request");
+    return res.status(401).json(new ApiResponse(401, "", "Unauthorized request"));
   }
+
   const decodedIncomingRefreshToken = await jwt.verify(
     incomingRefreshToken,
     process.env.REFRESH_TOKEN_KEY
   );
 
   if (!decodedIncomingRefreshToken) {
-    throw new ApiError(501, "error in decoding refresh token");
+    return res.status(501).json(new ApiResponse(501, "", "Error in decoding refresh token"));
   }
 
   const user = await User.findOne({ _id: decodedIncomingRefreshToken._id });
 
   if (!user) {
-    throw new ApiError(401, "Invalid refreshToken");
+    return res.status(401).json(new ApiResponse(401, "", "Invalid refreshToken"));
   }
 
   const dbRefreshToken = user.refreshToken;
 
   if (!dbRefreshToken) {
-    throw new ApiError(401, "user has logged out already!!!");
+    return res.status(401).json(new ApiResponse(401, "", "User has logged out already!!!"));
   }
 
   const newAccessToken = await user.generateAccessToken();
   const newRefreshToken = await user.generateRefreshToken();
 
-  // console.log("newAcessToken: ", newAccessToken);
   if (!newAccessToken) {
-    throw new ApiError(501, "error is generating accessToken");
+    return res.status(501).json(new ApiResponse(501, "", "Error in generating accessToken"));
   }
 
   if (!newRefreshToken) {
-    throw new ApiError(501, "error in generating refresh token");
+    return res.status(501).json(new ApiResponse(501, "", "Error in generating refresh token"));
   }
 
   const saveRefreshToken = await User.findByIdAndUpdate(
@@ -533,16 +568,17 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   );
 
   if (!saveRefreshToken) {
-    throw new ApiError(501, "error in saving new refresh token");
+    return res.status(501).json(new ApiResponse(501, "", "Error in saving new refresh token"));
   }
 
   const options = {
     httpOnly: true,
     secure: true,
   };
-  res
+  
+  return res
     .status(201)
-    .cookie("accessToken", newAccessToken, options) //AccessToken cookie's value will get replaced by newAccessToken.
+    .cookie("accessToken", newAccessToken, options) // AccessToken cookie's value will get replaced by newAccessToken.
     .cookie("refreshToken", newRefreshToken, options)
     .json(
       new ApiResponse(
@@ -552,10 +588,11 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
           refreshToken: newRefreshToken,
           username: user.username,
         },
-        "accesstoken is refreshed successfully!!!"
+        "AccessToken is refreshed successfully!!!"
       )
     );
 });
+
 
 //clear
 const removeCoverImage = asyncHandler(async (req, res) => {

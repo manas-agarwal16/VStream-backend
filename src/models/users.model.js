@@ -41,7 +41,8 @@ const userSchema = new mongoose.Schema(
     },
     avatar: {
       type: String, // cloudinary (or AWS) url stored in db,
-      default: 'https://cdn.pixabay.com/photo/2017/03/05/08/38/character-2117975_1280.png',
+      default:
+        "https://cdn.pixabay.com/photo/2017/03/05/08/38/character-2117975_1280.png",
     },
     coverImage: {
       type: String,
@@ -83,6 +84,8 @@ userSchema.methods.isCorrectPassword = async function (password) {
 
 //jwt.sign(payloads,secretKey,{expiresIn : expiryKey}) to generator token
 userSchema.methods.generateAccessToken = async function () {
+  console.log("expiry : ", process.env.ACCESS_TOKEN_EXPIRY);
+
   return jwt.sign(
     {
       _id: this._id, //auto saved by mongodb

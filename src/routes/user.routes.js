@@ -32,7 +32,7 @@ router.route("/register").post(
 
 router.route(`/get-current-user`).get(getCurrentUser);
 router.route("/verify-otp").post(verifyOTP);
-router.route("/resend-otp").get(resendOTP);
+router.route("/resend-otp/:email").get(resendOTP);
 router.route("/login").post(loginUser);
 router.route("/logout").get(verifyJWT, logoutUser);
 router.route("/refresh-access-token").get(refreshAccessToken);
