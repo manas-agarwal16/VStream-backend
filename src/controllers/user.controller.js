@@ -733,7 +733,7 @@ const updateCoverImage = asyncHandler(async (req, res) => {
 //clear
 const userProfile = asyncHandler(async (req, res) => {
   let { username } = req.params;
-  console.log(username);
+  console.log("username : " , username);
 
   const user = req.user;
 
@@ -848,7 +848,7 @@ const userProfile = asyncHandler(async (req, res) => {
     },
   ]);
 
-  console.log(channel);
+  console.log("channel : ", channel);
 
   if (channel.length > 0) {
     channel = channel[0];

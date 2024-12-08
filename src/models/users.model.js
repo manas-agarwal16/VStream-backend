@@ -29,12 +29,6 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
-    // watchHistory: [
-    //   {
-    //     type: mongoose.Schema.Types.ObjectId,
-    //     ref: "Video",
-    //   },
-    // ],
     watchHistory: {
       type: [{
         type: mongoose.Schema.Types.ObjectId,
@@ -49,7 +43,7 @@ const userSchema = new mongoose.Schema(
     avatar: {
       type: String, // cloudinary (or AWS) url stored in db,
       default:
-        "https://cdn.pixabay.com/photo/2017/03/05/08/38/character-2117975_1280.png",
+        "https://cdn.pixabay.com/photo/2016/09/28/02/14/user-1699635_1280.png",
     },
     coverImage: {
       type: String,
