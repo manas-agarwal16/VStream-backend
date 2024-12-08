@@ -29,12 +29,19 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
-    watchHistory: [
-      {
+    // watchHistory: [
+    //   {
+    //     type: mongoose.Schema.Types.ObjectId,
+    //     ref: "Video",
+    //   },
+    // ],
+    watchHistory: {
+      type: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: "Video",
-      },
-    ],
+      }],
+      default: [],
+    },
     refreshToken: {
       type: String,
       default: undefined,

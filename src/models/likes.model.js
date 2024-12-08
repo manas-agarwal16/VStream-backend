@@ -6,7 +6,8 @@ const likeSchema = new mongoose.Schema({
         ref : "User",
     },
     model_id : {
-        type : mongoose.Types.ObjectId,
+        type : mongoose.Schema.Types.ObjectId,
+        ref : "Video",
         require : true,
     },
     modelName : {

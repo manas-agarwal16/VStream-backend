@@ -6,6 +6,7 @@ import {
   deleteFileFromCloudinary,
 } from "../utils/cloudinary.js";
 
+import { Video } from "../models/videos.model.js";
 import bcrypt from "bcrypt";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
@@ -200,8 +201,7 @@ const registerUser = asyncHandler(async (req, res) => {
 //clear
 const resendOTP = asyncHandler(async (req, res) => {
   const { email } = req.params;
-  console.log("email : " , email);
-  
+  console.log("email : ", email);
 
   const OTP = generateOTP();
 
@@ -321,8 +321,8 @@ const verifyOTP = asyncHandler(async (req, res) => {
 const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
-  console.log(email , " ", password);
-  
+  console.log(email, " ", password);
+
   console.log("login");
 
   if (!email || !password) {
@@ -332,7 +332,7 @@ const loginUser = asyncHandler(async (req, res) => {
   }
 
   let user = await User.findOne({
-    $or: [{ username : email }, { email : email }], //find on the basis of username or email.
+    $or: [{ username: email }, { email: email }], //find on the basis of username or email.
   });
 
   if (!user) {
@@ -366,7 +366,7 @@ const loginUser = asyncHandler(async (req, res) => {
 
   const setRefreshToken = await User.findOneAndUpdate(
     {
-      $or: [{ username : email }, { email : email }], //find on the basis of username or email.
+      $or: [{ username: email }, { email: email }], //find on the basis of username or email.
     },
     { refreshToken: refreshToken }
   );
@@ -425,13 +425,14 @@ const logoutUser = asyncHandler(async (req, res) => {
     );
 });
 
-
 //clear
 const changePassword = asyncHandler(async (req, res) => {
   let { oldPassword, newPassword } = req.body;
 
   if (!newPassword || !oldPassword) {
-    return res.status(401).json(new ApiResponse(401, "", "Enter your passwords"));
+    return res
+      .status(401)
+      .json(new ApiResponse(401, "", "Enter your passwords"));
   }
   const user = req.user;
 
@@ -446,7 +447,9 @@ const changePassword = asyncHandler(async (req, res) => {
   const newHashPassword = await bcrypt.hash(newPassword, 10);
 
   if (!newHashPassword) {
-    return res.status(501).json(new ApiResponse(501, "", "Error in hashing password"));
+    return res
+      .status(501)
+      .json(new ApiResponse(501, "", "Error in hashing password"));
   }
 
   const updatePassword = await User.findByIdAndUpdate(
@@ -454,7 +457,9 @@ const changePassword = asyncHandler(async (req, res) => {
     { password: newHashPassword }
   );
   if (!updatePassword) {
-    return res.status(501).json(new ApiResponse(501, "", "Error in updating password"));
+    return res
+      .status(501)
+      .json(new ApiResponse(501, "", "Error in updating password"));
   }
 
   return res
@@ -468,7 +473,6 @@ const changePassword = asyncHandler(async (req, res) => {
     );
 });
 
-
 //clear
 const updateAvatar = asyncHandler(async (req, res) => {
   let avatarLocalPath;
@@ -478,13 +482,19 @@ const updateAvatar = asyncHandler(async (req, res) => {
   }
 
   if (!avatarLocalPath) {
-    return res.status(401).json(new ApiResponse(401, "", "Avatar is required!!!"));
+    return res
+      .status(401)
+      .json(new ApiResponse(401, "", "Avatar is required!!!"));
   }
 
   const newAvatar = await uploadOncloudinary(avatarLocalPath);
 
   if (!newAvatar) {
-    return res.status(501).json(new ApiResponse(501, "", "Error in uploading new avatar to Cloudinary."));
+    return res
+      .status(501)
+      .json(
+        new ApiResponse(501, "", "Error in uploading new avatar to Cloudinary.")
+      );
   }
   const user = req.user;
 
@@ -502,7 +512,15 @@ const updateAvatar = asyncHandler(async (req, res) => {
   const deletionResult = await deleteFileFromCloudinary(oldAvatarPublic_id);
 
   if (!deletionResult) {
-    return res.status(501).json(new ApiResponse(501, "", "Error in deleting old avatar from Cloudinary!!"));
+    return res
+      .status(501)
+      .json(
+        new ApiResponse(
+          501,
+          "",
+          "Error in deleting old avatar from Cloudinary!!"
+        )
+      );
   }
 
   const updateAvatar = await User.findByIdAndUpdate(
@@ -511,7 +529,9 @@ const updateAvatar = asyncHandler(async (req, res) => {
   );
 
   if (!updateAvatar) {
-    return res.status(501).json(new ApiResponse(501, "", "Error in updating avatar"));
+    return res
+      .status(501)
+      .json(new ApiResponse(501, "", "Error in updating avatar"));
   }
 
   return res
@@ -519,14 +539,15 @@ const updateAvatar = asyncHandler(async (req, res) => {
     .json(new ApiResponse(201, user, "Avatar has been updated successfully."));
 });
 
-
 //clear
 const refreshAccessToken = asyncHandler(async (req, res) => {
   const incomingRefreshToken =
     req.cookies?.refreshToken || req.body.refreshToken;
 
   if (!incomingRefreshToken) {
-    return res.status(401).json(new ApiResponse(401, "", "Unauthorized request"));
+    return res
+      .status(401)
+      .json(new ApiResponse(401, "", "Unauthorized request"));
   }
 
   const decodedIncomingRefreshToken = await jwt.verify(
@@ -535,30 +556,40 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   );
 
   if (!decodedIncomingRefreshToken) {
-    return res.status(501).json(new ApiResponse(501, "", "Error in decoding refresh token"));
+    return res
+      .status(501)
+      .json(new ApiResponse(501, "", "Error in decoding refresh token"));
   }
 
   const user = await User.findOne({ _id: decodedIncomingRefreshToken._id });
 
   if (!user) {
-    return res.status(401).json(new ApiResponse(401, "", "Invalid refreshToken"));
+    return res
+      .status(401)
+      .json(new ApiResponse(401, "", "Invalid refreshToken"));
   }
 
   const dbRefreshToken = user.refreshToken;
 
   if (!dbRefreshToken) {
-    return res.status(401).json(new ApiResponse(401, "", "User has logged out already!!!"));
+    return res
+      .status(401)
+      .json(new ApiResponse(401, "", "User has logged out already!!!"));
   }
 
   const newAccessToken = await user.generateAccessToken();
   const newRefreshToken = await user.generateRefreshToken();
 
   if (!newAccessToken) {
-    return res.status(501).json(new ApiResponse(501, "", "Error in generating accessToken"));
+    return res
+      .status(501)
+      .json(new ApiResponse(501, "", "Error in generating accessToken"));
   }
 
   if (!newRefreshToken) {
-    return res.status(501).json(new ApiResponse(501, "", "Error in generating refresh token"));
+    return res
+      .status(501)
+      .json(new ApiResponse(501, "", "Error in generating refresh token"));
   }
 
   const saveRefreshToken = await User.findByIdAndUpdate(
@@ -568,14 +599,16 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   );
 
   if (!saveRefreshToken) {
-    return res.status(501).json(new ApiResponse(501, "", "Error in saving new refresh token"));
+    return res
+      .status(501)
+      .json(new ApiResponse(501, "", "Error in saving new refresh token"));
   }
 
   const options = {
     httpOnly: true,
     secure: true,
   };
-  
+
   return res
     .status(201)
     .cookie("accessToken", newAccessToken, options) // AccessToken cookie's value will get replaced by newAccessToken.
@@ -592,7 +625,6 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       )
     );
 });
-
 
 //clear
 const removeCoverImage = asyncHandler(async (req, res) => {
@@ -834,32 +866,19 @@ const getWatchHistory = asyncHandler(async (req, res) => {
   if (!user) {
     throw new ApiError(401, "Invalid request");
   }
+  const watchedVideos = await Promise.all(
+    user.watchHistory.map(async (video_id) => {
+      let video = await Video.findById(video_id);
+      video = video.toObject();
+      let avatar = await User.findById(video.owner);
+      avatar = avatar.toObject();
+      avatar = avatar.avatar;
+      video = {...video , avatar};
+      return video;
+    })
+  );
 
-  const watchedVideos = await User.aggregate([
-    {
-      $match: {
-        _id: user._id,
-      },
-    },
-    {
-      $lookup: {
-        from: "videos",
-        localField: "watchHistory",
-        foreignField: "_id",
-        as: "video",
-      },
-    },
-    {
-      $unwind: "$video",
-    },
-    {
-      $project: {
-        video: 1,
-      },
-    },
-  ]);
-
-  console.log(watchedVideos);
+  // console.log("watchedVideos : ", watchedVideos);
 
   res
     .status(201)
