@@ -57,8 +57,10 @@ const toggleSubscribe = asyncHandler(async (req, res) => {
 
 //clear
 const subscriptionChannels = asyncHandler(async (req, res) => {
+  console.log("subscriptions");
+
   const user = req.user;
-  const channels = await Subscription.aggregate([
+  let channels = await Subscription.aggregate([
     {
       $match: {
         subscriber: new mongoose.Types.ObjectId(user._id),
@@ -69,25 +71,62 @@ const subscriptionChannels = asyncHandler(async (req, res) => {
         from: "users",
         localField: "subscribeTo",
         foreignField: "_id",
-        as: "username",
+        as: "subscriptions",
+        pipeline: [
+          {
+            $project: {
+              password: 0,
+              createdAt: 0,
+              updatedAt: 0,
+              watchHistory: 0,
+              description: 0,
+              premium: 0,
+              refreshToken: 0,
+              coverImage: 0,
+            },
+          },
+        ],
       },
     },
     {
-      $unwind: "$username",
+      $unwind: "$subscriptions",
     },
     {
       $group: {
-        _id: "$user_id",
-        subscriptions: { $push: "$username.username" },
+        _id: null,
+        subscriptions: { $push: "$subscriptions" },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        subscriptions: 1,
       },
     },
   ]);
-  console.log(channels);
-  if (channels.length === 0) {
-    res
-      .status(201)
-      .json(new ApiResponse(201, "U have not subscribed any channel yet"));
+  console.log("here channel : ", channels);
+
+  if (channels.length > 0) {
+    channels = channels[0]?.subscriptions;
+    console.log("channels: ", JSON.stringify(channels, null, 2));
+
+    channels = await Promise.all(
+      channels?.map(async (subscription) => {
+        const subscribers = await Subscription.find({
+          subscribeTo: subscription._id,
+        });
+        const subscribing = await Subscription.find({
+          subscriber: subscription._id,
+        });
+        return {
+          ...subscription,
+          subscribers: subscribers.length,
+          subscribing: subscribing.length,
+        };
+      })
+    );
   }
+
   res
     .status(201)
     .json(new ApiResponse(201, channels, "subscriptions fetched successfully"));

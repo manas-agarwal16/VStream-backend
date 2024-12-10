@@ -14,6 +14,7 @@ import { Comment } from "../models/comment.model.js";
 import mongoose from "mongoose";
 import { public_id } from "../utils/public_id.js";
 import jwt from "jsonwebtoken";
+import { response } from "express";
 
 const tagOptions = [
   "games",
@@ -198,6 +199,8 @@ const watchVideo = asyncHandler(async (req, res) => {
     _id: video.owner,
   });
 
+  // console.log("ownerDetails : " , ownerDetails);
+
   let likes = await Likes.find({ model_id: video_id, modelName: "video" });
   let subscribers = await Subscription.find({ subscribeTo: video.owner });
 
@@ -225,12 +228,15 @@ const watchVideo = asyncHandler(async (req, res) => {
   video = video.toObject();
   video = {
     ...video,
+    username: ownerDetails.username,
     avatar: ownerDetails.avatar,
     likes,
     subscribers,
     isLiked,
     isSubscribed,
   };
+
+  console.log("video : ", video);
 
   return res
     .status(201)
@@ -322,7 +328,7 @@ const getVideos = asyncHandler(async (req, res) => {
     },
   ]);
 
-  // console.log("videos backend : ", paginationVideos);
+  console.log("videos backend : ", JSON.stringify(paginationVideos, null, 2));
 
   setTimeout(() => {
     res
@@ -347,27 +353,34 @@ const search = asyncHandler(async (req, res) => {
         new ApiResponse(401, "search what you want to see 😊. Enjoy your day")
       );
   }
-  const videos = await Video.find({
+  let videos = await Video.find({
     $or: [
       { title: { $regex: search, $options: "i" } }, //regex for regular expression, i for case insensitivity
       { videoTag: { $regex: search, $options: "i" } },
       { description: { $regex: search, $options: "i" } },
       { username: { $regex: search, $options: "i" } },
     ],
-  });
-  if (videos.length === 0) {
-    res
-      .status(201)
-      .json(
-        new ApiResponse(201, "Sorry, your search did not match any documents")
-      );
-  }
+  }).select("-createdAt -updatedAt");
+
+  videos = await Promise.all(
+    videos.map(async (video) => {
+      video = video.toObject();
+      let ownerDetails = await User.findById(video.owner).select("avatar");
+      ownerDetails = ownerDetails.toObject();
+      const newVideo = { ...video, avatar: ownerDetails.avatar };
+      // console.log("newVideo : " , newVideo);
+      return newVideo;
+    })
+  );
+
+  // console.log("search videos : ", JSON.stringify(videos, null, 2));
+
   res
     .status(201)
     .json(
       new ApiResponse(
         201,
-        { videos },
+        videos,
         "videos with related search fetched successfully"
       )
     );
@@ -764,13 +777,14 @@ const likedVideos = asyncHandler(async (req, res) => {
     },
     {
       $project: {
+        video_id: { $arrayElemAt: ["$Videos._id", 0] },
         videoFile: { $arrayElemAt: ["$Videos.videoFile", 0] },
         thumbnail: { $arrayElemAt: ["$Videos.thumbnail", 0] },
         title: { $arrayElemAt: ["$Videos.title", 0] },
         description: { $arrayElemAt: ["$Videos.description", 0] },
         views: { $arrayElemAt: ["$Videos.views", 0] },
         username: { $arrayElemAt: ["$Videos.username", 0] },
-        owner : {$arrayElemAt : ["$Videos.owner" , 0]},
+        owner: { $arrayElemAt: ["$Videos.owner", 0] },
       },
     },
   ]);
@@ -794,19 +808,39 @@ const likedVideos = asyncHandler(async (req, res) => {
 });
 
 //clear
-const myVideos = asyncHandler(async (req, res) => {
-  const user = req.user;
-  const videos = await Video.aggregate([
+const allUserVideos = asyncHandler(async (req, res) => {
+  const { username } = req.params;
+  if (!username) {
+    return res
+      .status(409)
+      .json(new ApiResponse(409, "", "username is required"));
+  }
+
+  const exists = await User.findOne({ username });
+  if (!exists) {
+    return res
+      .status(409)
+      .json(new ApiResponse(409, "", "no such username exists"));
+  }
+  let videos = await Video.aggregate([
     {
       $match: {
-        owner: new mongoose.Types.ObjectId(user._id),
+        username: username,
       },
     },
     {
-      $sort: { createdAt: -1 },
+      $sort: { updatedAt: -1 },
     },
   ]);
-  console.log(videos);
+
+  videos = await Promise.all(
+    videos.map(async (video) => {
+      const avatar = await User.findById(video.owner).select("avatar");
+      return { ...video, avatar : avatar.avatar };
+    })
+  );
+
+  console.log("allVideos : ", videos);
   if (videos.length === 0) {
     return res
       .status(201)
@@ -1025,7 +1059,7 @@ export {
   getComments,
   likedVideos,
   deleteComment,
-  myVideos,
+  allUserVideos,
   updateVideoDetails,
   deleteVideo,
 };

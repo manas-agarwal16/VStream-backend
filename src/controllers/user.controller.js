@@ -103,6 +103,10 @@ const registerUser = asyncHandler(async (req, res) => {
 
   email = email.toLowerCase().trim();
   username = username.toLowerCase().trim();
+  fullName = fullName
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
 
   let existedUser = await User.findOne({
     $or: [{ email }, { username }],
@@ -733,7 +737,7 @@ const updateCoverImage = asyncHandler(async (req, res) => {
 //clear
 const userProfile = asyncHandler(async (req, res) => {
   let { username } = req.params;
-  console.log("username : " , username);
+  console.log("username : ", username);
 
   const user = req.user;
 
@@ -744,7 +748,11 @@ const userProfile = asyncHandler(async (req, res) => {
 
   const exists = await User.findOne({ username: username });
   if (!exists) {
-    throw new ApiError(404, "no such username exists");
+    console.log("no such username exists");
+    
+    return res
+      .status(401)
+      .json(new ApiResponse(401, "", "no such username exists"));
   }
 
   //userDetails , userUploadedVideos , subscribers , subscribing
@@ -768,7 +776,10 @@ const userProfile = asyncHandler(async (req, res) => {
       },
     },
     {
-      $unwind: "$allVideos",
+      $unwind: {
+        path: "$allVideos",
+        preserveNullAndEmptyArrays: true,
+      },
     },
     {
       $sort: { "allVideos.updatedAt": -1 },
@@ -786,14 +797,17 @@ const userProfile = asyncHandler(async (req, res) => {
         numberOfVideos: { $first: "$numberOfVideos" },
         recentVideos: { $push: "$allVideos" },
       },
-    }, //comment on 30 Nov to get all uploaded videos by the user.
-    // {
-    //   $addFields: {
-    //     recentVideos: { $slice: ["$recentVideos", 4] },
-    //   },
-    // },
+    },
     {
-      $unwind: "$allVideos",
+      $addFields: {
+        recentVideos: { $slice: ["$recentVideos", 3] },
+      },
+    },
+    {
+      $unwind: {
+        path: "$allVideos",
+        preserveNullAndEmptyArrays: true,
+      },
     },
     {
       $sort: { "allVideos.views": -1 },
@@ -806,7 +820,6 @@ const userProfile = asyncHandler(async (req, res) => {
         email: { $first: "$email" },
         description: { $first: "$description" },
         avatar: { $first: "$avatar" },
-        coverImage: { $first: "$coverImage" },
         numberOfVideos: { $first: "$numberOfVideos" },
         recentVideos: { $first: "$recentVideos" },
         mostViewedVideos: { $push: "$allVideos" },
@@ -814,7 +827,7 @@ const userProfile = asyncHandler(async (req, res) => {
     },
     {
       $addFields: {
-        mostViewedVideos: { $slice: ["$mostViewedVideos", 4] },
+        mostViewedVideos: { $slice: ["$mostViewedVideos", 3] },
       },
     },
     {
@@ -835,8 +848,6 @@ const userProfile = asyncHandler(async (req, res) => {
     },
     {
       $addFields: {
-        subscribers: { $size: "$subscribers" },
-        subscribing: { $size: "$subscribing" },
         isSubscribed: {
           $cond: {
             if: { $in: [user._id, "$subscribers.subscriber"] },
@@ -844,15 +855,17 @@ const userProfile = asyncHandler(async (req, res) => {
             else: false,
           },
         },
+        subscribers: { $size: "$subscribers" },
+        subscribing: { $size: "$subscribing" },
       },
     },
   ]);
 
-  console.log("channel : ", channel);
-
   if (channel.length > 0) {
     channel = channel[0];
-  }
+  } else channel = {};
+
+  console.log("channel : ", JSON.stringify(channel, null, 2));
 
   return res
     .status(201)
@@ -873,7 +886,7 @@ const getWatchHistory = asyncHandler(async (req, res) => {
       let avatar = await User.findById(video.owner);
       avatar = avatar.toObject();
       avatar = avatar.avatar;
-      video = {...video , avatar};
+      video = { ...video, avatar };
       return video;
     })
   );

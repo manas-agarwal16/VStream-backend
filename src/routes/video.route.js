@@ -11,7 +11,7 @@ import {
   getComments,
   getVideos,
   likedVideos,
-  myVideos,
+  allUserVideos,
   search,
   toggleCommentLike,
   toggleVideoLike,
@@ -36,13 +36,20 @@ router.route("/toggle-video-like").post(verifyJWT, toggleVideoLike);
 router.route("/get-videos").get(getVideos);
 router.route("/search").get(search);
 router.route("/comment").post(verifyJWT, comment);
-router.route('/edit-comment').patch(verifyJWT , editComment);
-router.route("/toggle-comment-like").post(verifyJWT , toggleCommentLike);
+router.route("/edit-comment").patch(verifyJWT, editComment);
+router.route("/toggle-comment-like").post(verifyJWT, toggleCommentLike);
 router.route("/delete-comment/:comment_id").delete(verifyJWT, deleteComment);
 router.route("/get-comments").get(getComments);
 router.route("/liked-videos").get(verifyJWT, likedVideos);
-router.route("/my-videos").get(verifyJWT, myVideos);
-router.route("/update-video-details").patch(verifyJWT,upload.fields([{name : "thumbnail" , maxCount : 1} , {name : "videoFile" , maxCount : 1}]), updateVideoDetails);
+router.route("/all-user-videos/:username").get(allUserVideos);
+router.route("/update-video-details").patch(
+  verifyJWT,
+  upload.fields([
+    { name: "thumbnail", maxCount: 1 },
+    { name: "videoFile", maxCount: 1 },
+  ]),
+  updateVideoDetails
+);
 // router
 //   .route("/update-thumbnail")
 //   .patch(
@@ -51,6 +58,5 @@ router.route("/update-video-details").patch(verifyJWT,upload.fields([{name : "th
 //     updateThumbnail
 //   );
 router.route("/delete-video").delete(verifyJWT, deleteVideo);
-
 
 export default router;
