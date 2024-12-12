@@ -37,7 +37,7 @@ const verifyJWT = asyncHandler(async (req, res, next) => {
         .json(new ApiResponse(401, "", "Unauthorized Request"));
     }
 
-    console.log("userJWT : " , user);
+    // console.log("userJWT : " , user);
     
 
     req.user = user; //here we have created a custom middleware req.user so that we can access user'details using req.user.

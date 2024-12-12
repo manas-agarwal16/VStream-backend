@@ -93,7 +93,7 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 const registerUser = asyncHandler(async (req, res) => {
   let { username, email, fullName, password } = req.body;
 
-  console.log(username, " ", email, " ", fullName, " ", password);
+  // console.log(username, " ", email, " ", fullName, " ", password);
 
   if (!fullName || !username || !email || !password) {
     return res
@@ -325,9 +325,9 @@ const verifyOTP = asyncHandler(async (req, res) => {
 const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
-  console.log(email, " ", password);
+  // console.log(email, " ", password);
 
-  console.log("login");
+  // console.log("login");
 
   if (!email || !password) {
     return res
@@ -737,7 +737,7 @@ const updateCoverImage = asyncHandler(async (req, res) => {
 //clear
 const userProfile = asyncHandler(async (req, res) => {
   let { username } = req.params;
-  console.log("username : ", username);
+  // console.log("username : ", username);
 
   const user = req.user;
 
@@ -865,7 +865,7 @@ const userProfile = asyncHandler(async (req, res) => {
     channel = channel[0];
   } else channel = {};
 
-  console.log("channel : ", JSON.stringify(channel, null, 2));
+  // console.log("channel : ", JSON.stringify(channel, null, 2));
 
   return res
     .status(201)

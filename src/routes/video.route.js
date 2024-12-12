@@ -39,7 +39,7 @@ router.route("/comment").post(verifyJWT, comment);
 router.route("/edit-comment").patch(verifyJWT, editComment);
 router.route("/toggle-comment-like").post(verifyJWT, toggleCommentLike);
 router.route("/delete-comment/:comment_id").delete(verifyJWT, deleteComment);
-router.route("/get-comments").get(getComments);
+router.route("/get-comments/:video_id").get(getComments);
 router.route("/liked-videos").get(verifyJWT, likedVideos);
 router.route("/all-user-videos/:username").get(allUserVideos);
 router.route("/update-video-details").patch(

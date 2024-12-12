@@ -169,28 +169,33 @@ const unlikeSong = asyncHandler(async (req, res) => {
 //all songs
 const getSongs = asyncHandler(async (req, res) => {
   //   const songs = await Song.find();
-  const songs = await Song.aggregate([
+  console.log("songs");
+
+  const page = parseInt(req.query.page) || 1;
+  const limit = 6;
+  const skip = (page - 1) * limit;
+
+  const paginationSongs = await Song.aggregate([
     {
-      $lookup: {
-        from: "likes",
-        localField: "_id",
-        foreignField: "model_id",
-        as: "likes",
-      },
+      $sort: { createdAt: 1, _id: 1 },
     },
     {
-      $addFields: {
-        likes: { $size: "$likes" },
-      },
+      $skip: skip, //skips the first n documents.
+    },
+    {
+      $limit: limit,
     },
   ]);
-  res
-    .status(201)
-    .json(new ApiResponse(201, songs, "songs fetched succesfully"));
+
+  setTimeout(() => {
+    res
+      .status(201)
+      .json(new ApiResponse(201, paginationSongs, "songs fetched succesfully"));
+  }, 500);
 });
 
 const searchSongs = asyncHandler(async (req, res) => {
-  let { search } = req.body;
+  let { search } = req.params;
   if (!search) {
     throw new ApiError(401, "search something");
   }
@@ -198,32 +203,24 @@ const searchSongs = asyncHandler(async (req, res) => {
   const songs = await Song.find({
     $or: [
       { songName: { $regex: search, $options: "i" } },
-      { username: { $regex: search, $options: "i" } },
+      { image: { $regex: search, $options: "i" } },
     ],
   });
 
   const randomSongs = await Song.find();
-  while (songs.length < 8) {
+  while (songs.length < 6) {
     const index = Math.floor(Math.random() * randomSongs.length);
     if (!songs.includes(randomSongs[index])) {
       songs.push(randomSongs[index]);
     }
   }
 
-  if (songs.length === 0) {
-    return res
-      .status(201)
-      .json(
-        new ApiResponse(
-          201,
-          "Sorry 😓 , Your search did not match any document"
-        )
-      );
-  }
+  console.log("search songs : " , songs);
+  
 
   res
     .status(201)
     .json(new ApiResponse(201, songs, "songs fetched successfully"));
 });
 
-export { uploadSong, getSongs, searchSongs, likeSong, unlikeSong , deleteSong };
+export { uploadSong, getSongs, searchSongs, likeSong, unlikeSong, deleteSong };

@@ -17,7 +17,7 @@ router
   .post(verifyJWT, upload.fields([{ name: "song", maxCount: 1 }]), uploadSong);
 
 router.route("/get-songs").get(getSongs);
-router.route("/search").get(searchSongs);
+router.route("/search/:search").get(searchSongs);
 router.route("/like-song").post(verifyJWT, likeSong);
 router.route("/unlike-song").post(verifyJWT, unlikeSong);
 router.route("/delete-song").delete(verifyJWT, deleteSong);

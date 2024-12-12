@@ -53,7 +53,7 @@ const uploadVideo = asyncHandler(async (req, res) => {
     );
   }
   const thumbnail = req.files?.thumbnail[0]?.path;
-  console.log(videoFile, thumbnail);
+  // console.log(videoFile, thumbnail);
 
   if (!videoFile) {
     throw new ApiError(401, "video file is require");
@@ -72,7 +72,7 @@ const uploadVideo = asyncHandler(async (req, res) => {
     throw new ApiError(501, "error in uploading thumbnail");
   }
 
-  console.log(uploadVideo);
+  // console.log(uploadVideo);
 
   const video = new Video({
     owner: user._id,
@@ -236,7 +236,7 @@ const watchVideo = asyncHandler(async (req, res) => {
     isSubscribed,
   };
 
-  console.log("video : ", video);
+  // console.log("video : ", video);
 
   return res
     .status(201)
@@ -310,7 +310,7 @@ const getVideos = asyncHandler(async (req, res) => {
 
   const paginationVideos = await Video.aggregate([
     {
-      $sort: { updatedAt: -1 },
+      $sort: { updatedAt: -1, _id: 1 },
     },
     {
       $skip: skip, //skips the first n documents.
@@ -328,7 +328,7 @@ const getVideos = asyncHandler(async (req, res) => {
     },
   ]);
 
-  console.log("videos backend : ", JSON.stringify(paginationVideos, null, 2));
+  // console.log("videos backend : ", JSON.stringify(paginationVideos, null, 2));
 
   setTimeout(() => {
     res
@@ -395,7 +395,7 @@ const comment = asyncHandler(async (req, res) => {
   const { content, video_id, parentComment_id } = req.body; //parentComment_id null if video comment
 
   // console.log("content : ", content);
-  console.log("video_id : ", video_id);
+  // console.log("video_id : ", video_id);
 
   if (!content) {
     return res
@@ -458,7 +458,7 @@ const comment = asyncHandler(async (req, res) => {
     avatar: user.avatar,
   };
 
-  console.log("comment : ", comment);
+  // console.log("comment : ", comment);
 
   return res
     .status(201)
@@ -633,128 +633,85 @@ const getComments = asyncHandler(async (req, res) => {
     );
   }
 
-  let { video_id, parentComment_id } = req.query;
+  let { video_id } = req.params;
 
-  console.log("video_id : ", video_id);
+  let videoComments = await Comment.aggregate([
+    {
+      $match: {
+        video_id: new mongoose.Types.ObjectId(video_id),
+      },
+    },
+    {
+      $sort: { updatedAt: -1 },
+    },
+    {
+      $lookup: {
+        from: "likes",
+        localField: "video_id",
+        foreignField: "model_id",
+        as: "likes",
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "user_id",
+        foreignField: "_id",
+        as: "owner",
+      },
+    },
+    {
+      $unwind: "$owner",
+    },
+    {
+      $addFields: {
+        likes: { $size: "$likes" },
+      },
+    },
+    {
+      $project: {
+        // _id: 1,
+        username: "$owner.username",
+        avatar: "$owner.avatar",
+        likes: "$likes",
+        content: "$content",
+      },
+    },
+  ]);
 
-  if (parentComment_id) {
-    const childComments = await Comment.aggregate([
-      {
-        $match: {
-          parentComment_id: new mongoose.Types.ObjectId(parentComment_id),
-        },
-      },
-      {
-        $lookup: {
-          from: "likes",
-          localField: "_id",
-          foreignField: "model_id",
-          as: "likes",
-        },
-      },
-      {
-        $addFields: {
-          likes: { $size: "$likes" },
-        },
-      },
-    ]);
-    if (childComments.length === 0) {
-      return res.status(201).json(new ApiResponse(201, "", "No comments yet"));
-    } else {
-      return res
-        .status(201)
-        .json(
-          new ApiResponse(
-            201,
-            { comments: childComments },
-            "comments fetched successfully"
-          )
-        );
-    }
-  } else if (video_id) {
-    let videoComments = await Comment.aggregate([
-      {
-        $match: {
-          video_id: new mongoose.Types.ObjectId(video_id),
-        },
-      },
-      {
-        $sort: { updatedAt: -1 },
-      },
-      {
-        $lookup: {
-          from: "likes",
-          localField: "video_id",
-          foreignField: "model_id",
-          as: "likes",
-        },
-      },
-      {
-        $lookup: {
-          from: "users",
-          localField: "user_id",
-          foreignField: "_id",
-          as: "owner",
-        },
-      },
-      {
-        $unwind: "$owner",
-      },
-      {
-        $addFields: {
-          likes: { $size: "$likes" },
-        },
-      },
-      {
-        $project: {
-          username: "$owner.username",
-          avatar: "$owner.avatar",
-          likes: "$likes",
-          content: "$content",
-        },
-      },
-    ]);
+  const totalComments = (await Comment.find({ video_id })).length;
 
-    const totalComments = (await Comment.find({ video_id })).length;
+  videoComments = await Promise.all(
+    videoComments.map(async (comment) => {
+      const isLiked = await Likes.findOne({
+        user_id: user?._id,
+        model_id: comment._id,
+        modelName: "comment",
+      });
+      return { ...comment, isLiked: !!isLiked }; // Add isLiked as a boolean
+    })
+  );
 
-    videoComments = await Promise.all(
-      videoComments.map(async (comment) => {
-        const isLiked = await Likes.findOne({
-          user_id: user?._id,
-          model_id: comment._id,
-          modelName: "comment",
-        });
-        return { ...comment, isLiked: !!isLiked }; // Add isLiked as a boolean
-      })
-    );
+  console.log("getcomments  : ", videoComments);
+  // console.log("totalComments : ", totalComments);
 
-    console.log("getcomments  : ", videoComments);
-    console.log("totalComments : ", totalComments);
-
-    setTimeout(() => {
-      return res
-        .status(201)
-        .json(
-          new ApiResponse(
-            201,
-            { videoComments, totalComments },
-            "comments fetched successfully"
-          )
-        );
-    }, 500);
-  } else {
+  setTimeout(() => {
     return res
-      .status(401)
+      .status(201)
       .json(
-        new ApiResponse(401, "", "video_id or parentComment_id is required")
+        new ApiResponse(
+          201,
+          { videoComments, totalComments },
+          "comments fetched successfully"
+        )
       );
-  }
+  }, 500);
 });
 
 //clear
 const likedVideos = asyncHandler(async (req, res) => {
   const user = req.user;
-  console.log("in liked videos");
+  // console.log("in liked videos");
 
   // console.log("user : ", user);
 
@@ -765,6 +722,7 @@ const likedVideos = asyncHandler(async (req, res) => {
     {
       $match: {
         user_id: new mongoose.Types.ObjectId(user._id),
+        modelName: "video",
       },
     },
     {
@@ -795,13 +753,13 @@ const likedVideos = asyncHandler(async (req, res) => {
   videos = await Promise.all(
     videos.map(async (video) => {
       let avatar = await User.findById(video.owner);
-      avatar = avatar.avatar;
+      console.log("avatar: ", avatar);
+
+      avatar = avatar?.avatar;
       return { ...video, avatar };
     })
   );
 
-  // if (!userLikedVideos) userLikedVideos = [];
-  // console.log("userLikedVideos : ", userLikedVideos);
   return res
     .status(201)
     .json(new ApiResponse(201, videos, "liked videos fetched successfully"));
@@ -836,11 +794,11 @@ const allUserVideos = asyncHandler(async (req, res) => {
   videos = await Promise.all(
     videos.map(async (video) => {
       const avatar = await User.findById(video.owner).select("avatar");
-      return { ...video, avatar : avatar.avatar };
+      return { ...video, avatar: avatar.avatar };
     })
   );
 
-  console.log("allVideos : ", videos);
+  // console.log("allVideos : ", videos);
   if (videos.length === 0) {
     return res
       .status(201)
