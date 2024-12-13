@@ -28,10 +28,10 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 
     if (!token) {
       return res
-        .status(201)
+        .status(401)
         .json(
           new ApiResponse(
-            201,
+            401,
             { loginStatus: false, userData: {} },
             "Unauthorized request!!"
           )
@@ -56,10 +56,10 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 
     if (!user) {
       return res
-        .status(201)
+        .status(401)
         .json(
           new ApiResponse(
-            201,
+            401,
             { loginStatus: false, userData: {} },
             "Unauthorized request!!"
           )
@@ -85,7 +85,13 @@ const getCurrentUser = asyncHandler(async (req, res) => {
     // throw new ApiError(401, "invalid access token", error);
     return res
       .status(401)
-      .json(new ApiResponse(401, "", "invalid access token"));
+      .json(
+        new ApiResponse(
+          401,
+          { loginStatus: false, userData: {} },
+          "invalid access token"
+        )
+      );
   }
 });
 
@@ -551,13 +557,21 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   if (!incomingRefreshToken) {
     return res
       .status(401)
-      .json(new ApiResponse(401, "", "Unauthorized request"));
+      .json(new ApiResponse(401, "", "refresh token expired"));
   }
 
-  const decodedIncomingRefreshToken = await jwt.verify(
-    incomingRefreshToken,
-    process.env.REFRESH_TOKEN_KEY
-  );
+  let decodedIncomingRefreshToken;
+  try {
+    decodedIncomingRefreshToken = await jwt.verify(
+      incomingRefreshToken,
+      process.env.REFRESH_TOKEN_KEY
+    );
+  } catch (error) {
+    console.log("refresh token expired : ", error);
+    return res
+      .status(401)
+      .json(new ApiResponse(401, "", "refresh token has expired!!!"));
+  }
 
   if (!decodedIncomingRefreshToken) {
     return res
@@ -582,52 +596,46 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   }
 
   const newAccessToken = await user.generateAccessToken();
-  const newRefreshToken = await user.generateRefreshToken();
-
   if (!newAccessToken) {
     return res
       .status(501)
       .json(new ApiResponse(501, "", "Error in generating accessToken"));
   }
 
-  if (!newRefreshToken) {
-    return res
-      .status(501)
-      .json(new ApiResponse(501, "", "Error in generating refresh token"));
-  }
+  // const saveRefreshToken = await User.findByIdAndUpdate(
+  //   { _id: user._id },
+  //   { refreshToken: newRefreshToken },
+  //   { new: true }
+  // );
 
-  const saveRefreshToken = await User.findByIdAndUpdate(
-    { _id: user._id },
-    { refreshToken: newRefreshToken },
-    { new: true }
-  );
-
-  if (!saveRefreshToken) {
-    return res
-      .status(501)
-      .json(new ApiResponse(501, "", "Error in saving new refresh token"));
-  }
+  // if (!saveRefreshToken) {
+  //   return res
+  //     .status(501)
+  //     .json(new ApiResponse(501, "", "Error in saving new refresh token"));
+  // }
 
   const options = {
     httpOnly: true,
     secure: true,
   };
 
-  return res
-    .status(201)
-    .cookie("accessToken", newAccessToken, options) // AccessToken cookie's value will get replaced by newAccessToken.
-    .cookie("refreshToken", newRefreshToken, options)
-    .json(
-      new ApiResponse(
-        201,
-        {
-          accessToken: newAccessToken,
-          refreshToken: newRefreshToken,
-          username: user.username,
-        },
-        "AccessToken is refreshed successfully!!!"
+  return (
+    res
+      .status(201)
+      .cookie("accessToken", newAccessToken, options) // AccessToken cookie's value will get replaced by newAccessToken.
+      // .cookie("refreshToken", newRefreshToken, options)
+      .json(
+        new ApiResponse(
+          201,
+          {
+            accessToken: newAccessToken,
+            // refreshToken: newRefreshToken,
+            username: user.username,
+          },
+          "AccessToken is refreshed successfully!!!"
+        )
       )
-    );
+  );
 });
 
 //clear
@@ -749,7 +757,7 @@ const userProfile = asyncHandler(async (req, res) => {
   const exists = await User.findOne({ username: username });
   if (!exists) {
     console.log("no such username exists");
-    
+
     return res
       .status(401)
       .json(new ApiResponse(401, "", "no such username exists"));

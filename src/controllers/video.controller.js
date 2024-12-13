@@ -104,17 +104,20 @@ const watchVideo = asyncHandler(async (req, res) => {
     req.header("Authorization")?.replace("Bearer ", "");
 
   if (token) {
-    const decodedToken = await jwt.verify(token, process.env.ACCESS_TOKEN_KEY);
+    try {
+      const decodedToken = await jwt.verify(
+        token,
+        process.env.ACCESS_TOKEN_KEY
+      );
 
-    if (!decodedToken) {
-      return res
-        .status(501)
-        .json(new ApiResponse(501, "", "Error in decoding token"));
+      user = await User.findOne({ _id: decodedToken._id }).select(
+        "-password -refreshToken"
+      );
+    } catch (error) {
+      // return res
+      //   .status(501)
+      //   .json(new ApiResponse(501, "", "Access token has expired."));
     }
-
-    user = await User.findOne({ _id: decodedToken._id }).select(
-      "-password -refreshToken"
-    );
   }
 
   const { video_id } = req.params;
@@ -620,17 +623,17 @@ const getComments = asyncHandler(async (req, res) => {
 
   if (token) {
     //collecting data from data by decoding it. .verify() function to decode token.
-    const decodedToken = await jwt.verify(token, process.env.ACCESS_TOKEN_KEY);
+    try {
+      const decodedToken = await jwt.verify(
+        token,
+        process.env.ACCESS_TOKEN_KEY
+      );
+      user = await User.findOne({ _id: decodedToken._id }).select(
+        "-password -refreshToken"
+      );
+    } catch (error) {
 
-    if (!decodedToken) {
-      return res
-        .status(501)
-        .json(new ApiResponse(501, "", "error in decoding token"));
     }
-
-    user = await User.findOne({ _id: decodedToken._id }).select(
-      "-password -refreshToken"
-    );
   }
 
   let { video_id } = req.params;
@@ -642,14 +645,19 @@ const getComments = asyncHandler(async (req, res) => {
       },
     },
     {
-      $sort: { updatedAt: -1 },
+      $sort: { updatedAt: -1, _id: 1 },
     },
     {
       $lookup: {
         from: "likes",
-        localField: "video_id",
+        localField: "_id",
         foreignField: "model_id",
-        as: "likes",
+        as: "totalLikes",
+      },
+    },
+    {
+      $addFields: {
+        totalLikes: { $size: "$totalLikes" },
       },
     },
     {
@@ -661,11 +669,9 @@ const getComments = asyncHandler(async (req, res) => {
       },
     },
     {
-      $unwind: "$owner",
-    },
-    {
-      $addFields: {
-        likes: { $size: "$likes" },
+      $unwind: {
+        path: "$owner",
+        preserveNullAndEmptyArrays: true,
       },
     },
     {
@@ -673,13 +679,15 @@ const getComments = asyncHandler(async (req, res) => {
         // _id: 1,
         username: "$owner.username",
         avatar: "$owner.avatar",
-        likes: "$likes",
-        content: "$content",
+        likes: "$totalLikes",
+        content: 1,
       },
     },
   ]);
 
-  const totalComments = (await Comment.find({ video_id })).length;
+  let totalComments = await Comment.find({ video_id });
+  console.log("totalComments comments : ", totalComments);
+  totalComments = totalComments.length;
 
   videoComments = await Promise.all(
     videoComments.map(async (comment) => {
@@ -694,18 +702,15 @@ const getComments = asyncHandler(async (req, res) => {
 
   console.log("getcomments  : ", videoComments);
   // console.log("totalComments : ", totalComments);
-
-  setTimeout(() => {
-    return res
-      .status(201)
-      .json(
-        new ApiResponse(
-          201,
-          { videoComments, totalComments },
-          "comments fetched successfully"
-        )
-      );
-  }, 500);
+  return res
+    .status(201)
+    .json(
+      new ApiResponse(
+        201,
+        { videoComments, totalComments },
+        "comments fetched successfully"
+      )
+    );
 });
 
 //clear
