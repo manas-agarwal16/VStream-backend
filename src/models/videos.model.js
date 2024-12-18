@@ -32,11 +32,6 @@ const videoSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    videoTag: {
-      type: String,
-      require: true,
-      enum : ["games","learning","music","comedy","news","serials","others"]
-    },
     username : {
       type : String,
       require : true

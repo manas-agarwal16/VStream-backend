@@ -33,64 +33,57 @@ const uploadVideo = asyncHandler(async (req, res) => {
     throw new ApiError("unauthorized request");
   }
 
-  let { title, description, videoTag } = req.body;
-  if (!title || !description || !videoTag) {
+  let { title, description, videoFile, thumbnail } = req.body;
+
+  console.log(title , " " , description , " " , videoFile , " " , thumbnail);
+  
+  if (!title || !description) {
     //dropdown for videoTag
     throw new ApiError(401, "All fields require");
   }
-  videoTag = videoTag.toLowerCase();
-
-  if (!tagOptions.includes(videoTag)) {
-    throw new ApiError(401, "Invalid Video Tag");
-  }
-
   // console.log(req.files);
-  const videoFile = req.files?.videoFile[0].path;
-  if (videoFile.includes(".mp3")) {
-    throw new ApiError(
-      401,
-      "Video file is expected. Instead  received a song file"
-    );
-  }
-  const thumbnail = req.files?.thumbnail[0]?.path;
+  // const videoFile = req.files?.videoFile[0].path;
+  // if (videoFile.includes(".mp3")) {
+  //   throw new ApiError(
+  //     401,
+  //     "Video file is expected. Instead  received a song file"
+  //   );
+  // }
+  // const thumbnail = req.files?.thumbnail[0]?.path;
   // console.log(videoFile, thumbnail);
 
-  if (!videoFile) {
-    throw new ApiError(401, "video file is require");
-  }
-  if (!thumbnail) {
-    throw new ApiError(401, "thumbnail is require");
-  }
+  // if (!videoFile) {
+  //   throw new ApiError(401, "video file is require");
+  // }
+  // if (!thumbnail) {
+  //   throw new ApiError(401, "thumbnail is require");
+  // }
 
-  const uploadVideo = await uploadOncloudinary(videoFile);
-  if (!uploadVideo) {
-    throw new ApiError(501, "error in uploading video to cloudinary");
-  }
+  // const uploadVideo = await uploadOncloudinary(videoFile);
+  // if (!uploadVideo) {
+  //   throw new ApiError(501, "error in uploading video to cloudinary");
+  // }
 
-  const uploadThumbnail = await uploadOncloudinary(thumbnail);
-  if (!uploadThumbnail) {
-    throw new ApiError(501, "error in uploading thumbnail");
-  }
+  // const uploadThumbnail = await uploadOncloudinary(thumbnail);
+  // if (!uploadThumbnail) {
+  //   throw new ApiError(501, "error in uploading thumbnail");
+  // }
 
   // console.log(uploadVideo);
 
   const video = new Video({
     owner: user._id,
-    videoFile: uploadVideo.url,
-    thumbnail: uploadThumbnail.url,
-    duration: uploadVideo.duration,
+    videoFile,
+    thumbnail,
     title,
     description,
-    videoTag,
     username: user.username,
   });
 
   await video.save().then(() => {
     res
       .status(201)
-      .json(
-        new ApiResponse(201, { video: video }, "video uploaded successfully")
-      );
+      .json(new ApiResponse(201, video, "video uploaded successfully"));
   });
   // await video.save();
 });
@@ -631,9 +624,7 @@ const getComments = asyncHandler(async (req, res) => {
       user = await User.findOne({ _id: decodedToken._id }).select(
         "-password -refreshToken"
       );
-    } catch (error) {
-
-    }
+    } catch (error) {}
   }
 
   let { video_id } = req.params;

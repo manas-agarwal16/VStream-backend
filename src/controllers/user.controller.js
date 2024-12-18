@@ -12,7 +12,6 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 import { generateOTP, sendOTPThroughEmail } from "../utils/otp_generator.js";
 import { OtpModel } from "../models/Otp.model.js";
-import mongoose from "mongoose";
 
 const getCurrentUser = asyncHandler(async (req, res) => {
   // console.log("getCurrentuseer");
@@ -97,9 +96,9 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 
 //clear
 const registerUser = asyncHandler(async (req, res) => {
-  let { username, email, fullName, password } = req.body;
+  let { username, email, fullName, password, avatarURL } = req.body;
 
-  // console.log(username, " ", email, " ", fullName, " ", password);
+  console.log(username, " ", email, " ", fullName, " ", password);
 
   if (!fullName || !username || !email || !password) {
     return res
@@ -144,27 +143,27 @@ const registerUser = asyncHandler(async (req, res) => {
       .json(new ApiResponse(409, "", "Username already exists"));
   }
 
-  console.log("req.files : ", req.files);
-  // File upload.
-  let avatarLocalPath;
-  if (req.files && req.files.avatar && req.files.avatar[0]) {
-    avatarLocalPath = req.files.avatar[0].path;
-    console.log("avatarLocalPath  : ", avatarLocalPath);
-  }
+  // console.log("req.files : ", req.files);
+  // // File upload.
+  // let avatarLocalPath;
+  // if (req.files && req.files.avatar && req.files.avatar[0]) {
+  //   avatarLocalPath = req.files.avatar[0].path;
+  //   console.log("avatarLocalPath  : ", avatarLocalPath);
+  // }
 
-  let cloudinaryAvatarURL;
+  // let cloudinaryAvatarURL;
 
-  if (avatarLocalPath) {
-    cloudinaryAvatarURL = await uploadOncloudinary(avatarLocalPath);
+  // if (avatarLocalPath) {
+  //   cloudinaryAvatarURL = await uploadOncloudinary(avatarLocalPath);
 
-    if (!cloudinaryAvatarURL) {
-      return res
-        .status(501)
-        .json(new ApiResponse(501, "", "Avatar not saved, try again"));
-    }
-  }
+  //   if (!cloudinaryAvatarURL) {
+  //     return res
+  //       .status(501)
+  //       .json(new ApiResponse(501, "", "Avatar not saved, try again"));
+  //   }
+  // }
 
-  console.log("cloudinaryAvatarURL : ", cloudinaryAvatarURL);
+  // console.log("cloudinaryAvatarURL : ", cloudinaryAvatarURL);
 
   const OTP = generateOTP();
 
@@ -172,7 +171,8 @@ const registerUser = asyncHandler(async (req, res) => {
     username,
     fullName,
     email,
-    avatar: cloudinaryAvatarURL?.url,
+    // avatar: cloudinaryAvatarURL?.url,
+    avatar: avatarURL,
     password,
     OTP,
   });
@@ -912,6 +912,141 @@ const getWatchHistory = asyncHandler(async (req, res) => {
     );
 });
 
+// import express from "express";
+// import "dotenv/config";
+// import {
+//   ApiError as ApiErrorPaypal,
+//   CheckoutPaymentIntent,
+//   Client,
+//   Environment,
+//   LogLevel,
+//   OrdersController,
+//   PaymentsController,
+// } from "@paypal/paypal-server-sdk";
+
+// const { PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET } = process.env;
+
+// const client = new Client({
+//   clientCredentialsAuthCredentials: {
+//     oAuthClientId: PAYPAL_CLIENT_ID,
+//     oAuthClientSecret: PAYPAL_CLIENT_SECRET,
+//   },
+//   timeout: 0,
+//   environment: Environment.Sandbox,
+//   logging: {
+//     logLevel: LogLevel.Info,
+//     logRequest: { logBody: true },
+//     logResponse: { logHeaders: true },
+//   },
+// });
+// const ordersController = new OrdersController(client);
+// const paymentsController = new PaymentsController(client);
+
+// /**
+//  * Create an order to start the transaction.
+//  * @see https://developer.paypal.com/docs/api/orders/v2/#orders_create
+//  */
+// const createOrder = async (cart) => {
+//   const collect = {
+//     body: {
+//       intent: "CAPTURE",
+//       purchaseUnits: [
+//         {
+//           amount: {
+//             currencyCode: "USD",
+//             value: "100",
+//           },
+//         },
+//       ],
+//     },
+//     prefer: "return=minimal",
+//   };
+
+//   try {
+
+//     const { body, ...httpResponse } =
+//       await ordersController.ordersCreate(collect);
+
+//     return {
+//       jsonResponse: JSON.parse(body),
+//       httpStatusCode: httpResponse.statusCode,
+//     };
+//   } catch (error) {
+//     if (error instanceof ApiErrorPaypal) {
+//       // const { statusCode, headers } = error;
+//       throw new Error(error.message);
+//     }
+//   }
+// };
+
+// // // createOrder route
+// // post("/api/orders", async (req, res) => {
+// //     try {
+// //         // use the cart information passed from the front-end to calculate the order amount detals
+// //         // const { cart } = req.body;
+// //         cart = undefined;
+// //         const { jsonResponse, httpStatusCode } = await createOrder(cart);
+// //         res.status(httpStatusCode).json(jsonResponse);
+// //     } catch (error) {
+// //         console.error("Failed to create order:", error);
+// //         res.status(500).json({ error: "Failed to create order." });
+// //     }
+// // });
+
+// const createOrderFunction = async (req, res) => {
+//   try {
+//     // use the cart information passed from the front-end to calculate the order amount detals
+//     // const { cart } = req.body;
+//     // const cart = [{ id: "YOUR_PRODUCT_ID", quantity: "YOUR_PRODUCT_QUANTITY" }];
+//     let cart;
+//     const { jsonResponse, httpStatusCode } = await createOrder(cart);
+//     res.status(httpStatusCode).json(jsonResponse);
+//   } catch (error) {
+//     console.error("Failed to create order:", error);
+//     res.status(500).json({ error: "Failed to create order." });
+//   }
+// };
+
+// /**
+//  * Capture payment for the created order to complete the transaction.
+//  * @see https://developer.paypal.com/docs/api/orders/v2/#orders_capture
+//  */
+// const captureOrder = async (orderID) => {
+//     const collect = {
+//         id: orderID,
+//         prefer: "return=minimal",
+//     };
+
+//     try {
+//         const { body, ...httpResponse } = await ordersController.ordersCapture(
+//             collect
+//         );
+//         // Get more response info...
+//         // const { statusCode, headers } = httpResponse;
+//         return {
+//             jsonResponse: JSON.parse(body),
+//             httpStatusCode: httpResponse.statusCode,
+//         };
+//     } catch (error) {
+//         if (error instanceof ApiError) {
+//             // const { statusCode, headers } = error;
+//             throw new Error(error.message);
+//         }
+//     }
+// };
+
+// // captureOrder route
+// app.post("/api/orders/:orderID/capture", async (req, res) => {
+//     try {
+//         const { orderID } = req.params;
+//         const { jsonResponse, httpStatusCode } = await captureOrder(orderID);
+//         res.status(httpStatusCode).json(jsonResponse);
+//     } catch (error) {
+//         console.error("Failed to create order:", error);
+//         res.status(500).json({ error: "Failed to capture order." });
+//     }
+// });
+
 export {
   getCurrentUser,
   registerUser,
@@ -926,4 +1061,5 @@ export {
   changePassword,
   userProfile,
   getWatchHistory,
+  // createOrderFunction,
 };

@@ -20,15 +20,17 @@ import {
   userProfile,
   getWatchHistory,
   getCurrentUser,
+  // createOrderFunction
 } from "../controllers/user.controller.js";
 
-router.route("/register").post(
-  upload.fields([
-    { name: "avatar", maxCount: 1 },
-    { name: "coverImage", maxCount: 1 },
-  ]),
-  registerUser
-);
+// router.route("/register").post(
+//   upload.fields([
+//     { name: "avatar", maxCount: 1 },
+//     { name: "coverImage", maxCount: 1 },
+//   ]),
+//   registerUser
+// );
+router.route("/register").post(registerUser);
 
 router.route(`/get-current-user`).get(getCurrentUser);
 router.route("/verify-otp").post(verifyOTP);
@@ -59,5 +61,7 @@ router.route("/change-password").patch(verifyJWT, changePassword);
 router.route("/user-profile/:username").get(verifyJWT, userProfile);
 
 router.route("/watch-history").get(verifyJWT, getWatchHistory);
+
+// router.route("/create-order").post(createOrderFunction);
 
 export default router;
