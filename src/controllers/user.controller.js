@@ -12,6 +12,9 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 import { generateOTP, sendOTPThroughEmail } from "../utils/otp_generator.js";
 import { OtpModel } from "../models/Otp.model.js";
+import { client } from "../utils/paypal.js";
+import generatePaypalAccessToken from "../utils/paypalAccessToken.js";
+import axios from "axios";
 
 const getCurrentUser = asyncHandler(async (req, res) => {
   // console.log("getCurrentuseer");
@@ -388,6 +391,7 @@ const loginUser = asyncHandler(async (req, res) => {
   }
 
   const options = {
+    sameSite: "None",
     httpOnly: true, // only server can access cookie not client side.
     secure: true, // cookie is set over secure and encrypted connections.
   };
@@ -401,6 +405,9 @@ const loginUser = asyncHandler(async (req, res) => {
 
 //clear
 const logoutUser = asyncHandler(async (req, res) => {
+
+
+  console.log("logout");
   const { _id } = req.user;
 
   const updateRefreshToken = await User.findByIdAndUpdate(
@@ -914,103 +921,290 @@ const getWatchHistory = asyncHandler(async (req, res) => {
 
 // import express from "express";
 // import "dotenv/config";
-// import {
-//   ApiError as ApiErrorPaypal,
-//   CheckoutPaymentIntent,
-//   Client,
-//   Environment,
-//   LogLevel,
-//   OrdersController,
-//   PaymentsController,
-// } from "@paypal/paypal-server-sdk";
+import paypal from "@paypal/paypal-server-sdk";
+import {
+  OrdersController,
+  PaymentsController,
+} from "@paypal/paypal-server-sdk";
 
-// const { PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET } = process.env;
-
-// const client = new Client({
-//   clientCredentialsAuthCredentials: {
-//     oAuthClientId: PAYPAL_CLIENT_ID,
-//     oAuthClientSecret: PAYPAL_CLIENT_SECRET,
-//   },
-//   timeout: 0,
-//   environment: Environment.Sandbox,
-//   logging: {
-//     logLevel: LogLevel.Info,
-//     logRequest: { logBody: true },
-//     logResponse: { logHeaders: true },
-//   },
-// });
-// const ordersController = new OrdersController(client);
-// const paymentsController = new PaymentsController(client);
+const ordersController = new OrdersController(client);
+const paymentsController = new PaymentsController(client);
 
 // /**
 //  * Create an order to start the transaction.
 //  * @see https://developer.paypal.com/docs/api/orders/v2/#orders_create
 //  */
-// const createOrder = async (cart) => {
-//   const collect = {
-//     body: {
-//       intent: "CAPTURE",
-//       purchaseUnits: [
-//         {
-//           amount: {
-//             currencyCode: "USD",
-//             value: "100",
-//           },
+let paypalAccessToken;
+
+const createOrderFunction = async (cart) => {
+  paypalAccessToken = await generatePaypalAccessToken();
+
+  console.log("paypalAccessToken : ", paypalAccessToken);
+
+  const collect = {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${paypalAccessToken}`,
+    },
+    body: {
+      intent: "CAPTURE",
+      purchaseUnits: [
+        {
+          amount: {
+            currencyCode: "USD",
+            value: "100.00",
+          },
+        },
+      ],
+      purchase_units: [
+        {
+          amount: {
+            currency_code: "USD",
+            value: "100.00",
+          },
+        },
+      ],
+      // application_context: {
+      //   return_url: "https://www.linkedin.com/in/manas-agarwal-995370275/", // Redirect URL after payment
+      //   cancel_url: "https://www.linkedin.com/in/manas-agarwal-995370275/", // Redirect URL if payment is canceled
+      // },
+    },
+    prefer: "return=minimal",
+  };
+
+  try {
+    let { body, ...httpResponse } =
+      await ordersController.ordersCreate(collect);
+
+    body = JSON.parse(body);
+    console.log("body type : ", typeof body);
+
+    body = { ...body, paypalAccessToken: paypalAccessToken };
+
+    return {
+      jsonResponse: body,
+      httpStatusCode: httpResponse.statusCode,
+    };
+  } catch (error) {
+    // if (error instanceof ApiErrorPaypal) {
+    // const { statusCode, headers } = error;
+    console.log("paypal error is triggering : ", error);
+    throw new Error(error.message);
+    // }
+  }
+};
+
+//   const PAYPAL_API = "https://api-m.sandbox.paypal.com/v2/checkout/orders";
+//   const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
+//   const PAYPAL_SECRET = process.env.PAYPAL_SECRET;
+
+//   const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_SECRET}`).toString(
+//     "base64"
+//   );
+
+//   const orderData = {
+//     intent: "CAPTURE",
+//     purchase_units: [
+//       {
+//         amount: {
+//           currency_code: "USD",
+//           value: cart.toString(),
 //         },
-//       ],
-//     },
-//     prefer: "return=minimal",
+//       },
+//     ],
 //   };
 
 //   try {
-
-//     const { body, ...httpResponse } =
-//       await ordersController.ordersCreate(collect);
+//     const response = await axios.post(PAYPAL_API, orderData, {
+//       headers: {
+//         "Content-Type": "application/json",
+//         Authorization: `Basic ${auth}`,
+//       },
+//     });
 
 //     return {
-//       jsonResponse: JSON.parse(body),
-//       httpStatusCode: httpResponse.statusCode,
+//       jsonResponse: response.data,
+//       httpStatusCode: response.status,
 //     };
-//   } catch (error) {
-//     if (error instanceof ApiErrorPaypal) {
-//       // const { statusCode, headers } = error;
-//       throw new Error(error.message);
+//   } catch (err) {
+//     console.error("Error in createOrderFunction:", err.response?.data || err);
+//     throw new Error("Failed to communicate with PayPal API.");
+//   }
+// };
+
+// // createOrder route
+// post("/api/orders", async (req, res) => {
+//     try {
+//         // use the cart information passed from the front-end to calculate the order amount detals
+//         // const { cart } = req.body;
+//         cart = undefined;
+//         const { jsonResponse, httpStatusCode } = await createOrder(cart);
+//         res.status(httpStatusCode).json(jsonResponse);
+//     } catch (error) {
+//         console.error("Failed to create order:", error);
+//         res.status(500).json({ error: "Failed to create order." });
 //     }
-//   }
-// };
+// });
 
-// // // createOrder route
-// // post("/api/orders", async (req, res) => {
-// //     try {
-// //         // use the cart information passed from the front-end to calculate the order amount detals
-// //         // const { cart } = req.body;
-// //         cart = undefined;
-// //         const { jsonResponse, httpStatusCode } = await createOrder(cart);
-// //         res.status(httpStatusCode).json(jsonResponse);
-// //     } catch (error) {
-// //         console.error("Failed to create order:", error);
-// //         res.status(500).json({ error: "Failed to create order." });
-// //     }
-// // });
+//Need to change the url. abhi localhost dala hai.
 
-// const createOrderFunction = async (req, res) => {
+const createOrder = async (req, res) => {
+  paypalAccessToken = await generatePaypalAccessToken();
+  const url = "https://api-m.sandbox.paypal.com/v2/checkout/orders";
+
+  try {
+    const response = await axios.post(
+      url,
+      {
+      intent: "CAPTURE",
+      purchase_units: [
+        {
+        amount: {
+          currency_code: "USD",
+          value: "10.00",
+        },
+        },
+      ],
+      application_context: {
+        return_url: "http://localhost:5173/premium/success",  // Your return URL after successful payment
+        cancel_url: "http://localhost:5173",   // Your cancel URL in case of payment cancellation
+      },
+      },
+      {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${paypalAccessToken}`,
+      },
+      }
+    );
+
+    console.log("Order Created:", response.data);
+    return res.status(201).json(response.data);
+  } catch (error) {
+    console.error(
+      "Error creating order:",
+      error.response?.data || error.message
+    );
+    return res.status(501).json({ error: "Failed to create order." });
+  }
+
+  // try {
+  //   const cart = 101;
+
+  //   const { jsonResponse, httpStatusCode } = await createOrderFunction(cart);
+  //   console.log("httpStatusCode : ", httpStatusCode);
+
+  //   console.log("jsonResponse : ", jsonResponse);
+
+  //   return res.status(httpStatusCode).json(jsonResponse);
+  // } catch (error) {
+  //   console.error("Failed to create order:", error);
+  //   res.status(500).json({ error: "Failed to create order." });
+  // }
+
+  // try {
+  //   // Make the API call to PayPal to create the order
+
+  //   console.log(
+  //     "Available methods in ordersController:",
+  //     Object.keys(ordersController)
+  //   );
+
+  //   const { body, ...httpResponse } =
+  //     await ordersController.createRequest(orderRequest);
+
+  //   console.log("body : ", body);
+
+  //   return res.status(httpResponse.statusCode).json(body);
+
+  //   const request = new paypal.orders.OrdersCreateRequest();
+  //   request.requestBody(orderRequest);
+
+  //   const order = await client.execute(request);
+
+  //   // Return the approval URL for the client to complete the payment
+  //   const approvalUrl = order.result.links.find(
+  //     (link) => link.rel === "approve"
+  //   ).href;
+
+  //   res.status(200).json({
+  //     id: order.result.id, // Order ID
+  //     approvalUrl: approvalUrl, // Approval URL
+  //   });
+  // } catch (error) {
+  //   console.error("Error creating order:", error);
+  //   res.status(500).json({
+  //     message: "Error creating PayPal order",
+  //     error: error.message,
+  //   });
+  // }
+};
+
+// const captureOrder = asyncHandler(async (req, res) => {
+//   const { orderID , paypalAccessToken } = req.body; // Get the order ID from the frontend
+
+//   console.log("in captureOrder : ", orderID ,  paypalAccessToken);
+
 //   try {
-//     // use the cart information passed from the front-end to calculate the order amount detals
-//     // const { cart } = req.body;
-//     // const cart = [{ id: "YOUR_PRODUCT_ID", quantity: "YOUR_PRODUCT_QUANTITY" }];
-//     let cart;
-//     const { jsonResponse, httpStatusCode } = await createOrder(cart);
-//     res.status(httpStatusCode).json(jsonResponse);
+//     // Create the capture order request
+//     const request = new paypal.orders.OrdersCaptureRequest(orderID);
+//     request.requestBody({});
+
+//     // Execute the capture request
+//     const capture = await client.execute(request);
+
+//     // Check the result and respond accordingly
+//     if (capture.statusCode === 200) {
+//       res.status(200).json({
+//         message: "Payment successful!",
+//         captureDetails: capture.result,
+//       });
+//     } else {
+//       res.status(400).json({
+//         message: "Error capturing the payment.",
+//         error: capture.result,
+//       });
+//     }
 //   } catch (error) {
-//     console.error("Failed to create order:", error);
-//     res.status(500).json({ error: "Failed to create order." });
+//     console.error("Error capturing order:", error);
+//     res.status(500).json({
+//       message: "Error processing PayPal payment",
+//       error: error.message,
+//     });
 //   }
-// };
+// });
+
+const captureOrder = asyncHandler(async (req, res) => {
+  const { orderID } = req.body;
+  const url = `https://api-m.sandbox.paypal.com/v2/checkout/orders/${orderID}/capture`;
+
+  try {
+    const response = await axios.post(
+      url,
+      {},
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${paypalAccessToken}`,
+        },
+      }
+    );
+
+    console.log("Capture Response:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error(
+      "Error capturing payment:",
+      error.response?.data || error.message
+    );
+  }
+});
 
 // /**
 //  * Capture payment for the created order to complete the transaction.
 //  * @see https://developer.paypal.com/docs/api/orders/v2/#orders_capture
 //  */
+
 // const captureOrder = async (orderID) => {
 //     const collect = {
 //         id: orderID,
@@ -1061,5 +1255,6 @@ export {
   changePassword,
   userProfile,
   getWatchHistory,
-  // createOrderFunction,
+  createOrder,
+  captureOrder,
 };
