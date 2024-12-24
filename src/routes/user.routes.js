@@ -20,7 +20,8 @@ import {
   userProfile,
   getWatchHistory,
   getCurrentUser,
-  // createOrderFunction
+  createOrder,
+  captureOrder,
 } from "../controllers/user.controller.js";
 
 // router.route("/register").post(
@@ -31,7 +32,8 @@ import {
 //   registerUser
 // );
 router.route("/register").post(registerUser);
-
+router.route("/premium/create-order").post(createOrder);
+router.route("/premium/capture-order").post(captureOrder);
 router.route(`/get-current-user`).get(getCurrentUser);
 router.route("/verify-otp").post(verifyOTP);
 router.route("/resend-otp/:email").get(resendOTP);
