@@ -405,8 +405,6 @@ const loginUser = asyncHandler(async (req, res) => {
 
 //clear
 const logoutUser = asyncHandler(async (req, res) => {
-
-
   console.log("logout");
   const { _id } = req.user;
 
@@ -427,6 +425,7 @@ const logoutUser = asyncHandler(async (req, res) => {
   const options = {
     httpOnly: true,
     secure: true,
+    sameSite: "None",
   };
 
   res
@@ -624,6 +623,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   const options = {
     httpOnly: true,
     secure: true,
+    sameSite: "None",
   };
 
   return (
@@ -1056,25 +1056,25 @@ const createOrder = async (req, res) => {
     const response = await axios.post(
       url,
       {
-      intent: "CAPTURE",
-      purchase_units: [
-        {
-        amount: {
-          currency_code: "USD",
-          value: "10.00",
+        intent: "CAPTURE",
+        purchase_units: [
+          {
+            amount: {
+              currency_code: "USD",
+              value: "10.00",
+            },
+          },
+        ],
+        application_context: {
+          return_url: "http://localhost:5173/premium/success", // Your return URL after successful payment
+          cancel_url: "http://localhost:5173", // Your cancel URL in case of payment cancellation
         },
-        },
-      ],
-      application_context: {
-        return_url: "http://localhost:5173/premium/success",  // Your return URL after successful payment
-        cancel_url: "http://localhost:5173",   // Your cancel URL in case of payment cancellation
-      },
       },
       {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${paypalAccessToken}`,
-      },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${paypalAccessToken}`,
+        },
       }
     );
 
