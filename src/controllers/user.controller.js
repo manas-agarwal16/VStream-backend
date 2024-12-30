@@ -390,16 +390,26 @@ const loginUser = asyncHandler(async (req, res) => {
       .json(new ApiResponse(501, "", "Error in updating refresh token"));
   }
 
-  const options = {
-    sameSite: "None",
-    httpOnly: true, // only server can access cookie not client side.
-    secure: true, // cookie is set over secure and encrypted connections.
-  };
+  // const options = {
+  //   sameSite: "None",
+  //   httpOnly: true, // only server can access cookie not client side.
+  //   secure: true, // cookie is set over secure and encrypted connections.
+  // };
 
   return res
     .status(200)
-    .cookie("accessToken", accessToken, options)
-    .cookie("refreshToken", refreshToken, options)
+    .cookie("accessToken", accessToken, {
+      sameSite: "None",
+      httpOnly: true, // only server can access cookie not client side.
+      secure: true,
+      maxAge: 60 * 24 * 60 * 1000, //1d
+    })
+    .cookie("refreshToken", refreshToken, {
+      sameSite: "None",
+      httpOnly: true, // only server can access cookie not client side.
+      secure: true,
+      maxAge: 60 * 24 * 60 * 1000 * 60,
+    })
     .json(new ApiResponse(201, user, "User has logged in successfully"));
 });
 
@@ -629,7 +639,12 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   return (
     res
       .status(201)
-      .cookie("accessToken", newAccessToken, options) // AccessToken cookie's value will get replaced by newAccessToken.
+      .cookie("accessToken", newAccessToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "None",
+        maxAge: 60 * 24 * 60 * 1000, //1d
+      }) // AccessToken cookie's value will get replaced by newAccessToken.
       // .cookie("refreshToken", newRefreshToken, options)
       .json(
         new ApiResponse(
