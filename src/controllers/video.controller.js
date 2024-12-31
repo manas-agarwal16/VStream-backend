@@ -336,7 +336,7 @@ const getVideos = asyncHandler(async (req, res) => {
           "videos fetched successfully"
         )
       );
-  }, 500);
+  }, 350);
 });
 
 //clear , Remember : mention in the frontend that ur video title video tag and ur description helps user to find ur video through search.
