@@ -624,6 +624,12 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       .json(new ApiResponse(401, "", "User has logged out already!!!"));
   }
 
+  if (dbRefreshToken !== incomingRefreshToken) {
+    return res
+      .status(401)
+      .json(new ApiResponse(401, "", "Invalid refreshToken"));
+  }
+
   const newAccessToken = await user.generateAccessToken();
   if (!newAccessToken) {
     return res
