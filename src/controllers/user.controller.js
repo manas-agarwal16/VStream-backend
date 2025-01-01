@@ -218,6 +218,19 @@ const resendOTP = asyncHandler(async (req, res) => {
 
   const OTP = generateOTP();
 
+  const user = await OtpModel.findOne({ email });
+
+  if (!user) {
+    return res
+      .status(409)
+      .json(
+        new ApiResponse(
+          409,
+          "",
+          "Email not found or expired. Try Registering again"
+        )
+      );
+  }
   const updateOTP = await OtpModel.findOneAndUpdate(
     { email: email },
     { OTP: OTP }

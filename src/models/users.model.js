@@ -61,7 +61,7 @@ userSchema.pre("save", async function (next) {
   try {
     if (this.isModified("password")) {
       // its suggesting that await has no use but its necessary.
-      this.password = await bcrypt.hash(this.password, 10); //10 : no. of salt rounds
+     this.password = await bcrypt.hash(this.password, 10); //10 : no. of salt rounds
     }
     next();
   } catch (error) {
