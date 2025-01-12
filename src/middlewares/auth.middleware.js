@@ -56,7 +56,7 @@ const verifyJWT = asyncHandler(async (req, res, next) => {
     // throw new ApiError(401,"Unauthorized Request");
     return res
       .status(401)
-      .json(new ApiResponse(401, "", "Unauthorized Request jhjjkhjhjkhjkh"));
+      .json(new ApiResponse(401, "", "Unauthorized Request"));
   }
 });
 
