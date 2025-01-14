@@ -6,14 +6,14 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 
 // we can write _ in place of res of theres no use of res, although its not mondatory..
 const verifyJWT = asyncHandler(async (req, res, next) => {
-  console.log("custom verifyJWT");
+  // console.log("custom verifyJWT");
 
   try {
     const token =
       req.cookies?.accessToken ||
       req.header("Authorization")?.replace("Bearer ", "");
 
-    console.log("token : ", token);
+    // console.log("token : ", token);
     
     if (!token) {
       throw new ApiError(401,'Unauthorized Request')

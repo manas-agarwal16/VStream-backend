@@ -101,7 +101,10 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 const registerUser = asyncHandler(async (req, res) => {
   let { username, email, fullName, password, avatarURL } = req.body;
 
-  console.log(username, " ", email, " ", fullName, " ", password);
+  // console.log('avatarURL : ', avatarURL);
+  
+
+  // console.log(username, " ", email, " ", fullName, " ", password);
 
   if (!fullName || !username || !email || !password) {
     return res
