@@ -284,8 +284,8 @@ const verifyOTP = asyncHandler(async (req, res) => {
 
   if (!dbOTP) {
     return res
-      .status(201)
-      .json(new ApiResponse(201, "", "OTP has expired. Please register again"));
+      .status(401)
+      .json(new ApiResponse(401, "", "OTP has expired. Please register again"));
   }
 
   dbOTP = dbOTP.OTP;
