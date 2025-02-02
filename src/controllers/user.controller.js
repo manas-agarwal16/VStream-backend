@@ -898,17 +898,18 @@ const getWatchHistory = asyncHandler(async (req, res) => {
   if (!user) {
     throw new ApiError(401, "Invalid request");
   }
-  const watchedVideos = await Promise.all(
+  let watchedVideos = await Promise.all(
     user.watchHistory.map(async (video_id) => {
       let video = await Video.findById(video_id);
-      video = video.toObject();
-      let avatar = await User.findById(video.owner);
-      avatar = avatar.toObject();
-      avatar = avatar.avatar;
+      video = video?.toObject();
+      let avatar = await User.findById(video?.owner);
+      avatar = avatar?.toObject();
+      avatar = avatar?.avatar;
       video = { ...video, avatar };
       return video;
     })
   );
+  // if (!watchedVideos) watchedVideos = [];
 
   // console.log("watchedVideos : ", watchedVideos);
 
