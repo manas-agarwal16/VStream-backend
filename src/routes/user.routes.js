@@ -40,13 +40,7 @@ router.route("/resend-otp/:email").get(resendOTP);
 router.route("/login").post(loginUser);
 router.route("/logout").get(verifyJWT, logoutUser);
 router.route("/refresh-access-token").get(refreshAccessToken);
-router
-  .route("/update-avatar")
-  .patch(
-    verifyJWT,
-    upload.fields([{ name: "avatar", maxCount: 1 }]),
-    updateAvatar
-  );
+router.route("/update-avatar").put  (verifyJWT, updateAvatar);
 
 router
   .route("/update-coverImage")

@@ -102,7 +102,6 @@ const registerUser = asyncHandler(async (req, res) => {
   let { username, email, fullName, password, avatarURL } = req.body;
 
   // console.log('avatarURL : ', avatarURL);
-  
 
   // console.log(username, " ", email, " ", fullName, " ", password);
 
@@ -517,57 +516,24 @@ const changePassword = asyncHandler(async (req, res) => {
 
 //clear
 const updateAvatar = asyncHandler(async (req, res) => {
-  let avatarLocalPath;
+  const { avatarURL, id } = req.body;
+  console.log("updateAvatar");
+  console.log("avatarURL : ", avatarURL);
+  console.log("id : ", id);
 
-  if (req.files && req.files.avatar && req.files.avatar[0]) {
-    avatarLocalPath = req.files.avatar[0].path;
-  }
-
-  if (!avatarLocalPath) {
+  if (!avatarURL || !id) {
     return res
       .status(401)
-      .json(new ApiResponse(401, "", "Avatar is required!!!"));
+      .json(new ApiResponse(401, "", "Avatar and userId is required!!!"));
   }
 
-  const newAvatar = await uploadOncloudinary(avatarLocalPath);
-
-  if (!newAvatar) {
-    return res
-      .status(501)
-      .json(
-        new ApiResponse(501, "", "Error in uploading new avatar to Cloudinary.")
-      );
-  }
   const user = req.user;
 
   // Deleting old avatar from Cloudinary
-  const oldAvatar = user.avatar;
-  let oldAvatarPublic_id = oldAvatar.replace(
-    "http://res.cloudinary.com/dgrm75hbj/image/upload/",
-    ""
-  );
-
-  const array = oldAvatarPublic_id.split("/"); //string to array based on "/";
-  oldAvatarPublic_id = array[1].replace(".png", "");
-  console.log(oldAvatarPublic_id);
-
-  const deletionResult = await deleteFileFromCloudinary(oldAvatarPublic_id);
-
-  if (!deletionResult) {
-    return res
-      .status(501)
-      .json(
-        new ApiResponse(
-          501,
-          "",
-          "Error in deleting old avatar from Cloudinary!!"
-        )
-      );
-  }
 
   const updateAvatar = await User.findByIdAndUpdate(
     { _id: user._id },
-    { avatar: newAvatar.url }
+    { avatar: avatarURL }
   );
 
   if (!updateAvatar) {
