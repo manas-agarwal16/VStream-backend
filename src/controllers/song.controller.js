@@ -14,6 +14,7 @@ import { Comment } from "../models/comment.model.js";
 import mongoose, { modelNames } from "mongoose";
 import { public_id } from "../utils/public_id.js";
 import { Song } from "../models/song.model.js";
+import { up } from "inquirer/lib/utils/readline.js";
 //clear
 const uploadSong = asyncHandler(async (req, res) => {
   const user = req.user;
@@ -24,6 +25,8 @@ const uploadSong = asyncHandler(async (req, res) => {
   console.log(req.files);
   const songFile = req.files?.song[0].path;
 
+  const image = req.files?.image ? req.files.image[0].path : null;
+
   if (!songFile) {
     throw new ApiError(401, "songFile is required");
   }
@@ -31,12 +34,14 @@ const uploadSong = asyncHandler(async (req, res) => {
     throw new ApiError(401, "song file is expected.");
   }
 
-  let upload;
+  let upload, uploadImage;
   try {
     upload = await uploadOncloudinary(songFile);
     if (!upload) {
       throw new ApiError(501, "error in uploading song to cloudinary");
     }
+
+    uploadImage = await uploadOncloudinary(image);
   } catch (error) {
     throw new ApiError(501, "error in uploading song to cloudinary");
   }
@@ -45,6 +50,7 @@ const uploadSong = asyncHandler(async (req, res) => {
     songName,
     username: user.username,
     songFile: upload.url,
+    image: uploadImage?.url,
   });
 
   await newSong.save();
@@ -215,8 +221,7 @@ const searchSongs = asyncHandler(async (req, res) => {
     }
   }
 
-  console.log("search songs : " , songs);
-  
+  console.log("search songs : ", songs);
 
   res
     .status(201)

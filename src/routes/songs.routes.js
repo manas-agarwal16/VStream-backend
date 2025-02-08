@@ -12,9 +12,14 @@ import {
   uploadSong,
 } from "../controllers/song.controller.js";
 
-router
-  .route("/upload-song")
-  .post(verifyJWT, upload.fields([{ name: "song", maxCount: 1 }]), uploadSong);
+router.route("/upload-song").post(
+  verifyJWT,
+  upload.fields([
+    { name: "song", maxCount: 1 },
+    { name: "image", maxCount: 1 },
+  ]),
+  uploadSong
+);
 
 router.route("/get-songs").get(getSongs);
 router.route("/search/:search").get(searchSongs);

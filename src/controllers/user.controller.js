@@ -1,6 +1,6 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
-import { User } from "../models/users.model.js"; // User has all access to DB.
+import { User } from "../models/users.model.js";
 import {
   uploadOncloudinary,
   deleteFileFromCloudinary,
@@ -17,16 +17,11 @@ import generatePaypalAccessToken from "../utils/paypalAccessToken.js";
 import axios from "axios";
 
 const getCurrentUser = asyncHandler(async (req, res) => {
-  // console.log("getCurrentuseer");
-
-  // console.log("token in cookies : ", req.cookies?.accessToken);
   let user;
   try {
     const token =
       req.cookies?.accessToken ||
       req.header("Authorization")?.replace("Bearer ", "");
-
-    // console.log("token : ", token);
 
     if (!token) {
       return res
@@ -40,13 +35,9 @@ const getCurrentUser = asyncHandler(async (req, res) => {
         );
     }
 
-    //collecting data from data by decoding it. .verify() function to decode token.
     const decodedToken = await jwt.verify(token, process.env.ACCESS_TOKEN_KEY);
 
-    // console.log("decodeToken : ", decodedToken);
-
     if (!decodedToken) {
-      // throw new ApiError(501, "error in decodeding token");
       return res
         .status(501)
         .json(new ApiResponse(501, "", "error in decoding token"));
@@ -67,11 +58,6 @@ const getCurrentUser = asyncHandler(async (req, res) => {
           )
         );
     }
-
-    // console.log("user : ", user);
-
-    // console.log("user : " , user);
-
     res
       .status(201)
       .json(
@@ -84,7 +70,6 @@ const getCurrentUser = asyncHandler(async (req, res) => {
   } catch (error) {
     console.log("error : ", error);
 
-    // throw new ApiError(401, "invalid access token", error);
     return res
       .status(401)
       .json(
@@ -97,13 +82,8 @@ const getCurrentUser = asyncHandler(async (req, res) => {
   }
 });
 
-//clear
 const registerUser = asyncHandler(async (req, res) => {
   let { username, email, fullName, password, avatarURL } = req.body;
-
-  // console.log('avatarURL : ', avatarURL);
-
-  // console.log(username, " ", email, " ", fullName, " ", password);
 
   if (!fullName || !username || !email || !password) {
     return res
@@ -148,35 +128,12 @@ const registerUser = asyncHandler(async (req, res) => {
       .json(new ApiResponse(409, "", "Username already exists"));
   }
 
-  // console.log("req.files : ", req.files);
-  // // File upload.
-  // let avatarLocalPath;
-  // if (req.files && req.files.avatar && req.files.avatar[0]) {
-  //   avatarLocalPath = req.files.avatar[0].path;
-  //   console.log("avatarLocalPath  : ", avatarLocalPath);
-  // }
-
-  // let cloudinaryAvatarURL;
-
-  // if (avatarLocalPath) {
-  //   cloudinaryAvatarURL = await uploadOncloudinary(avatarLocalPath);
-
-  //   if (!cloudinaryAvatarURL) {
-  //     return res
-  //       .status(501)
-  //       .json(new ApiResponse(501, "", "Avatar not saved, try again"));
-  //   }
-  // }
-
-  // console.log("cloudinaryAvatarURL : ", cloudinaryAvatarURL);
-
   const OTP = generateOTP();
 
   const pendingUser = new OtpModel({
     username,
     fullName,
     email,
-    // avatar: cloudinaryAvatarURL?.url,
     avatar: avatarURL,
     password,
     OTP,
@@ -213,10 +170,8 @@ const registerUser = asyncHandler(async (req, res) => {
     });
 });
 
-//clear
 const resendOTP = asyncHandler(async (req, res) => {
   const { email } = req.params;
-  console.log("email : ", email);
 
   const OTP = generateOTP();
 
@@ -268,7 +223,6 @@ const resendOTP = asyncHandler(async (req, res) => {
     });
 });
 
-//clear
 const verifyOTP = asyncHandler(async (req, res) => {
   let { OTP, email } = req.body;
   if (!OTP || !email) {
@@ -345,13 +299,8 @@ const verifyOTP = asyncHandler(async (req, res) => {
     });
 });
 
-//clear
 const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
-
-  // console.log(email, " ", password);
-
-  // console.log("login");
 
   if (!email || !password) {
     return res
@@ -360,7 +309,7 @@ const loginUser = asyncHandler(async (req, res) => {
   }
 
   let user = await User.findOne({
-    $or: [{ username: email }, { email: email }], //find on the basis of username or email.
+    $or: [{ username: email }, { email: email }],
   });
 
   if (!user) {
@@ -394,7 +343,7 @@ const loginUser = asyncHandler(async (req, res) => {
 
   const setRefreshToken = await User.findOneAndUpdate(
     {
-      $or: [{ username: email }, { email: email }], //find on the basis of username or email.
+      $or: [{ username: email }, { email: email }],
     },
     { refreshToken: refreshToken }
   );
@@ -411,24 +360,20 @@ const loginUser = asyncHandler(async (req, res) => {
   //   secure: true, // cookie is set over secure and encrypted connections.
   // };
 
+  const options = {
+    sameSite: "None",
+    httpOnly: true, // only server can access cookie not client side.
+    secure: true,
+    maxAge: 60 * 24 * 60 * 1000, //1d
+  };
+
   return res
     .status(200)
-    .cookie("accessToken", accessToken, {
-      sameSite: "None",
-      httpOnly: true, // only server can access cookie not client side.
-      secure: true,
-      maxAge: 60 * 24 * 60 * 1000, //1d
-    })
-    .cookie("refreshToken", refreshToken, {
-      sameSite: "None",
-      httpOnly: true, // only server can access cookie not client side.
-      secure: true,
-      maxAge: 60 * 24 * 60 * 1000 * 60,
-    })
+    .cookie("accessToken", accessToken, options)
+    .cookie("refreshToken", refreshToken, options)
     .json(new ApiResponse(201, user, "User has logged in successfully"));
 });
 
-//clear
 const logoutUser = asyncHandler(async (req, res) => {
   console.log("logout");
   const { _id } = req.user;
@@ -466,7 +411,6 @@ const logoutUser = asyncHandler(async (req, res) => {
     );
 });
 
-//clear
 const changePassword = asyncHandler(async (req, res) => {
   let { oldPassword, newPassword } = req.body;
 
@@ -514,7 +458,6 @@ const changePassword = asyncHandler(async (req, res) => {
     );
 });
 
-//clear
 const updateAvatar = asyncHandler(async (req, res) => {
   const { avatarURL, id } = req.body;
   console.log("updateAvatar");
@@ -547,7 +490,6 @@ const updateAvatar = asyncHandler(async (req, res) => {
     .json(new ApiResponse(201, user, "Avatar has been updated successfully."));
 });
 
-//clear
 const refreshAccessToken = asyncHandler(async (req, res) => {
   const incomingRefreshToken =
     req.cookies?.refreshToken || req.body.refreshToken;
@@ -649,7 +591,6 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   );
 });
 
-//clear
 const removeCoverImage = asyncHandler(async (req, res) => {
   const user = req.user;
   const oldCoverImage = user.coverImage;
@@ -685,7 +626,6 @@ const removeCoverImage = asyncHandler(async (req, res) => {
     .json(new ApiResponse(201, "coverImage has been removed succesfully!"));
 });
 
-//clear
 const updateCoverImage = asyncHandler(async (req, res) => {
   const user = req.user;
 
@@ -753,7 +693,6 @@ const updateCoverImage = asyncHandler(async (req, res) => {
     );
 });
 
-//clear
 const userProfile = asyncHandler(async (req, res) => {
   let { username } = req.params;
   // console.log("username : ", username);
@@ -891,7 +830,6 @@ const userProfile = asyncHandler(async (req, res) => {
     .json(new ApiResponse(201, { channel }, "user profile details"));
 });
 
-//clear
 const getWatchHistory = asyncHandler(async (req, res) => {
   const user = req.user;
 

@@ -4,8 +4,6 @@ import upload from "../middlewares/multer.middleware.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 const router = Router();
-//these coded execute when user meets the endpoint /users and all endpoints mentioned here r  after /api/v1/users/ => /api/v1/users/.....
-
 import {
   registerUser,
   loginUser,
@@ -23,24 +21,16 @@ import {
   createOrder,
   captureOrder,
 } from "../controllers/user.controller.js";
-
-// router.route("/register").post(
-//   upload.fields([
-//     { name: "avatar", maxCount: 1 },
-//     { name: "coverImage", maxCount: 1 },
-//   ]),
-//   registerUser
-// );
-router.route("/register").post(registerUser);
-router.route("/premium/create-order").post(createOrder);
-router.route("/premium/capture-order").post(captureOrder);
-router.route(`/get-current-user`).get(getCurrentUser);
-router.route("/verify-otp").post(verifyOTP);
-router.route("/resend-otp/:email").get(resendOTP);
-router.route("/login").post(loginUser);
-router.route("/logout").get(verifyJWT, logoutUser);
-router.route("/refresh-access-token").get(refreshAccessToken);
-router.route("/update-avatar").put  (verifyJWT, updateAvatar);
+  router.route("/register").post(registerUser);
+  router.route("/premium/create-order").post(createOrder);
+  router.route("/premium/capture-order").post(captureOrder);
+  router.route(`/get-current-user`).get(getCurrentUser);
+  router.route("/verify-otp").post(verifyOTP);
+  router.route("/resend-otp/:email").get(resendOTP);
+  router.route("/login").post(loginUser);
+  router.route("/logout").get(verifyJWT, logoutUser);
+  router.route("/refresh-access-token").get(refreshAccessToken);
+  router.route("/update-avatar").put  (verifyJWT, updateAvatar);
 
 router
   .route("/update-coverImage")
@@ -57,7 +47,5 @@ router.route("/change-password").patch(verifyJWT, changePassword);
 router.route("/user-profile/:username").get(verifyJWT, userProfile);
 
 router.route("/watch-history").get(verifyJWT, getWatchHistory);
-
-// router.route("/create-order").post(createOrderFunction);
 
 export default router;
