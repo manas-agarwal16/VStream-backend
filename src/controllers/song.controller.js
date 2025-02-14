@@ -14,7 +14,8 @@ import { Comment } from "../models/comment.model.js";
 import mongoose, { modelNames } from "mongoose";
 import { public_id } from "../utils/public_id.js";
 import { Song } from "../models/song.model.js";
-import { up } from "inquirer/lib/utils/readline.js";
+// import { up } from "inquirer/lib/utils/readline.js";
+
 //clear
 const uploadSong = asyncHandler(async (req, res) => {
   const user = req.user;
