@@ -3,8 +3,10 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 
 const app = express();
+console.log(process.env);
 
-const allowedOrigins = process.env.CORS_ORIGIN.split(",");
+// const allowedOrigins = process.env.CORS_ORIGIN.split(",");
+const allowedOrigins = ["https://v-stream-fun.vercel.app"];
 
 //.use to configure middelware.
 app.use(
