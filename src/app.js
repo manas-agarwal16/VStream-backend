@@ -11,13 +11,7 @@ const allowedOrigins = ["https://v-stream-fun.vercel.app"];
 //.use to configure middelware.
 app.use(
   cors({
-    origin: function (origin, callback) {
-      if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
-        callback(null, true); // Allow the request
-      } else {
-        callback(new Error("Not allowed by CORS")); // Block the request
-      }
-    },
+    origin: allowedOrigins,
     credentials: true,
   })
 );
