@@ -2,7 +2,7 @@ import dotenv from "dotenv";
 dotenv.config({ path: "../.env" });
 import DB from "./db/dbConnection.js";
 import { app } from "./app.js";
-
+ 
 DB()
   .then(() => {
     app.listen(process.env.PORT || 4000, () => {
